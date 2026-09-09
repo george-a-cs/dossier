@@ -8,15 +8,15 @@ Grounded briefing from a document collection. Cite a passage or refuse.
 
 **Recommendation.** A thin RAG on one collection. Retrieve, pack, generate, then drop any citation that was not retrieved. If nothing survives, the answer is “Not in this dossier.”
 
-**Shipped.** Local Docker / venv app, plus a stage deploy on our VPS for a real try-yourself. FastAPI + Next.js. SQLite + sqlite-vec + FTS5. Hybrid RRF retrieve. Follow-up rewrite (falls back to the raw question). SSE brief. Three-pane desk. Session strip (latency, estimated USD, grounded/refused). MCP `search_corpus` on the same retrieve function. Offline eval + CI. No LangChain.
+**Shipped.** Local Docker / venv app, plus a stage deploy on our VPS for a real try-yourself. FastAPI + Next.js. SQLite + sqlite-vec + FTS5. Hybrid RRF retrieve. Follow-up rewrite (falls back to the raw question). SSE brief. Three-pane desk. Session strip (latency, estimated USD, grounded/refused). MCP `search_corpus` on the same retrieve function. Offline eval + CI. No LangChain: the path is rewrite, retrieve, pack, cite-or-refuse, and we want that in one file a person can read and debug. Bring LangChain (or LlamaIndex) in later if you grow a real tool graph, need a pile of vendor SDKs, or the team already lives in that stack. Redis can wait too: consider it when more than one API process must share sessions, rate limits, an ingest job queue, or live brief fan-out. One box and SQLite is enough for this test task.
 
-**Deferred.** PDF.js page highlight, a recorded walkthrough, OCR. Retrieval ranks stay behind `NEXT_PUBLIC_DEBUG=1` — off in the happy path. PDF highlight was cut on purpose — Markdown/TXT `mark` + `?chunk=` is the path we can defend.
+**Deferred.** PDF.js page highlight, a recorded walkthrough, OCR. Retrieval ranks stay behind `NEXT_PUBLIC_DEBUG=1`, off in the happy path. PDF highlight was cut on purpose: Markdown/TXT `mark` + `?chunk=` is the path we can defend.
 
 ## Try it (stage)
 
-There is a live stage instance on our own VPS — our infrastructure, not a rented app host. Same app as this repo. We left SQLite (and the other pieces) as standalone resources on that box so we could spend the test task on the product, not on moving the database or standing up a cluster. It is there so you can click around yourself: sign in, open a document, ask a question, see a citation or a refuse. Stage, not production. Ask us for the URL if you do not have it.
+There is a live stage instance on our own VPS, our infrastructure, not a rented app host. Same app as this repo. We left SQLite (and the other pieces) as standalone resources on that box so we could spend the test task on the product, not on moving the database or standing up a cluster. It is there so you can click around yourself: sign in, open a document, ask a question, see a citation or a refuse. Stage, not production. Ask us for the URL if you do not have it.
 
-The stage box talks to our own self-hosted models: **gpt-oss-120b-F16** for document research, and **Qwen3-VL-32B** for vision / document reasoning. That is on purpose — the papers stay on our side, and we are not paying a cloud API by the token. If you would rather use a third-party cloud model (OpenAI, Gemini, Claude, Mistral, and the like), that is a few env vars: point `LLM_BASE_URL`, `LLM_API_KEY`, and `LLM_MODEL` at their OpenAI-compatible endpoint and restart. No code change.
+The stage box talks to our own self-hosted models: **gpt-oss-120b-F16** for document research, and **Qwen3-VL-32B** for vision / document reasoning. That is on purpose: the papers stay on our side, and we are not paying a cloud API by the token. If you would rather use a third-party cloud model (OpenAI, Gemini, Claude, Mistral, and the like), that is a few env vars: point `LLM_BASE_URL`, `LLM_API_KEY`, and `LLM_MODEL` at their OpenAI-compatible endpoint and restart. No code change.
 
 **Cost / quality.** Self-hosted default is $0 (`PRICE_*_PER_1M=0`). Set those vars if you point at a billed API. Quality is the refuse rule plus `make eval` (hit-rate ≥ 0.8, refusal = 1.0), not a vibe check.
 
@@ -51,7 +51,7 @@ Those host ports are for Compose / Coolify stage / Cloudflare Tunnel. `make api-
 
 In the desk: the demo files are already in the library. Ask “What is the recommended dose?”, click the citation, then ask “Is there any X-ray related document?”
 
-Default LLM host is an OpenAI-compatible ollama-swap (`LLM_BASE_URL` + `LLM_API_KEY` + `LLM_MODEL`). Point those at `https://api.openai.com/v1` to use OpenAI. Live embeddings run only if `EMBEDDING_MODEL` is set — a chat key must not send a chat model to `/embeddings`. Tests never need a key.
+Default LLM host is an OpenAI-compatible ollama-swap (`LLM_BASE_URL` + `LLM_API_KEY` + `LLM_MODEL`). Point those at `https://api.openai.com/v1` to use OpenAI. Live embeddings run only if `EMBEDDING_MODEL` is set; a chat key must not send a chat model to `/embeddings`. Tests never need a key.
 
 MCP (optional):
 
@@ -119,13 +119,14 @@ v1 is a laptop (or CI) Compose stack. When it has to leave the laptop:
 | Originals | Object storage (S3 / GCS / Azure Blob). DB keeps text + vectors |
 | Writers / HA | **SQLite → RDS Postgres + pgvector** (or Cloud SQL / Azure Database) via the repository adapter. Same tables, new SQL. |
 | Ingest | Async worker. Sync ingest is the bottleneck once PDFs get large |
+| Shared cache / queue | **Redis** when you run more than one API worker: sessions, rate limits, ingest jobs, or fan-out of streaming briefs. Skip it on a single box. |
 | Secrets | Manager + rotation. Never bake keys into the image |
 | Access | Private net, WAF, rate limits, SSO |
 | Telemetry | OpenTelemetry + an LLM trace store. We already persist timings and `citation_valid` |
 | Quality | Keep `make eval` in CI. Add a live eval job behind a secret |
 | PHI | Stop and get a BAA / audit story first. This repo is not that |
 
-Scale the API horizontally. The index is the hard part — treat it as a service, not a file you copy onto every replica.
+Scale the API horizontally. The index is the hard part: treat it as a service, not a file you copy onto every replica.
 
 Containers on ECS Fargate / Cloud Run / Azure Container Apps before Kubernetes. We do not need a cluster for one briefing process.
 
@@ -135,7 +136,7 @@ Containers on ECS Fargate / Cloud Run / Azure Container Apps before Kubernetes. 
 
 - **Models.** OpenAI-compatible `/chat/completions` and `/embeddings`. Default chat model name is `researcher-internal` (lab host; confirm what `/v1/models` actually lists). Tests use `FakeLlm` / `FakeEmbeddings`.
 - **Index.** sqlite-vec kNN + FTS5. Hybrid RRF, `k_const=60`, top 8.
-- **Orchestrator.** Custom: rewrite (if history) → embed → hybrid retrieve → pack (~3000 tokens) → stream → `verify_citations`. Rewrite cannot add web instructions; failure uses the raw question. No LangChain.
+- **Orchestrator.** Custom: rewrite (if history) → embed → hybrid retrieve → pack (~3000 tokens) → stream → `verify_citations`. Rewrite cannot add web instructions; failure uses the raw question. No LangChain unless the loop outgrows one file.
 - **Prompts.** Passages in `<source chunk_id=…>`. Corpus text is untrusted. Model must ignore instructions found inside sources.
 - **Citations.** Trailing `{"chunk_ids":[…]}` stripped before display. UI renders `final.citations` only.
 - **Refuse.** Zero kept ids → “Not in this dossier.” Empty retrieve skips the LLM.
@@ -163,7 +164,7 @@ Plan first (`plans/`), tests as the contract, review every diff. Assistants wrot
 
 ## More time
 
-PDF.js when we have text-layer PDFs, a 2–3 minute silent walkthrough, async ingest, a Postgres adapter, a cross-encoder rerank. In that order.
+PDF.js when we have text-layer PDFs, a 2-3 minute silent walkthrough, async ingest, a Postgres adapter, a cross-encoder rerank. In that order.
 
 ## Screenshots
 
