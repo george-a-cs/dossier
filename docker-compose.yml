@@ -1,0 +1,54 @@
+# Stage stack (Coolify environment: stage, not production).
+# Host ports are unique so Cloudflare Tunnel can ingress without 80/443:
+#   web → ${WEB_HOST_PORT:-18470}
+#   api → ${API_HOST_PORT:-18471}
+# Do not commit .env. Coolify injects secrets; local Compose reads `.env` for ${VAR} substitution.
+
+services:
+  api:
+    build: ./apps/api
+    ports:
+      - "${API_HOST_PORT:-18471}:8000"
+    environment:
+      SERVICE_URL_API_8000: ""
+      DATABASE_PATH: /data/dossier.db
+      FILES_DIR: /data/files
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:18470,http://127.0.0.1:18470,http://localhost:3000,http://127.0.0.1:3000}
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://gravi-lab-ollama.gravitonic.uk/v1}
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_MODEL: ${LLM_MODEL:-researcher-internal}
+      VISION_MODEL: ${VISION_MODEL:-vision-docs-reasoning}
+      EMBEDDING_BASE_URL: ${EMBEDDING_BASE_URL:-}
+      EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-}
+      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-george@csegoldi.com}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-Lets_Check@SomethingElse}
+      BOOTSTRAP_ADMIN_NAME: ${BOOTSTRAP_ADMIN_NAME:-George}
+      PRICE_EMBED_PER_1M: ${PRICE_EMBED_PER_1M:-0}
+      PRICE_LLM_IN_PER_1M: ${PRICE_LLM_IN_PER_1M:-0}
+      PRICE_LLM_OUT_PER_1M: ${PRICE_LLM_OUT_PER_1M:-0}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    volumes:
+      - dossier-data:/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/healthz')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  web:
+    build:
+      context: ./apps/web
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:18471}
+    ports:
+      - "${WEB_HOST_PORT:-18470}:3000"
+    environment:
+      SERVICE_URL_WEB_3000: ""
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:18471}
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  dossier-data:

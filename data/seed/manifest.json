@@ -1,0 +1,9 @@
+{
+  "documents": [
+    { "filename": "label-excerpt.md", "title": "Synthetic label excerpt" },
+    { "filename": "guidance-excerpt.md", "title": "Synthetic guidance" },
+    { "filename": "sop-synthetic.md", "title": "Synthetic SOP" },
+    { "filename": "injection.md", "title": "Prompt-injection fixture" }
+  ],
+  "licence": "Synthetic demo text. Not clinical. No PHI."
+}

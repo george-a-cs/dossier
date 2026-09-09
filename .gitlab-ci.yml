@@ -1,0 +1,19 @@
+stages:
+  - test
+
+pytest:
+  image: python:3.12
+  stage: test
+  before_script:
+    - python -m venv .venv
+    - .venv/bin/pip install -e "apps/api[dev]"
+  script:
+    - make test
+    - make eval
+    - make lint-api
+
+web:
+  image: node:22
+  stage: test
+  script:
+    - cd apps/web && npm install && npx tsc --noEmit

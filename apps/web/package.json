@@ -1,0 +1,27 @@
+{
+  "name": "dossier-web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --port 3000",
+    "build": "next build",
+    "start": "next start --port 3000"
+  },
+  "dependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "docx-preview": "^0.4.0",
+    "next": "^15.5.2",
+    "pdfjs-dist": "^6.3.289",
+    "postcss": "^8.5.28",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "tailwindcss": "^4.3.3",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@types/node": "^24.3.1",
+    "@types/react": "^19.1.12",
+    "@types/react-dom": "^19.1.9",
+    "typescript": "^5.9.2"
+  }
+}

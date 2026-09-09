@@ -1,0 +1,16 @@
+.env
+data/dossier.db
+data/dossier.db-*
+data/files/*
+!data/files/.gitkeep
+node_modules
+.next
+__pycache__
+.pytest_cache
+.ruff_cache
+.venv
+*.egg-info
+dist
+.turbo
+*.pyc
+.DS_Store
