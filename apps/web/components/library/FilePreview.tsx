@@ -420,6 +420,9 @@ export function FilePreview({
               onSheet={setPage}
               onSheetCount={onPageCount}
               kind={kind === "csv" ? "csv" : "workbook"}
+              highlight={terms}
+              passage={focus?.text}
+              sheetHint={focus?.page_start}
               onBusy={onPreviewBusy}
               zoom={zoom}
             />
@@ -432,6 +435,7 @@ export function FilePreview({
               filename={file.filename}
               highlight={terms}
               passage={focus?.text}
+              fallbackText={chunks.map((chunk) => chunk.text).join("\n\n")}
               onBusy={onPreviewBusy}
               zoom={zoom}
             />

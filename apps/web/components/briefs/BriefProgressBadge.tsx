@@ -8,7 +8,7 @@ const STEPS = ["Thinking", "Searching", "Processing"] as const;
 const HOLD_MS = 1200;
 const FADE_MS = 220;
 
-export function BriefProgressBadge() {
+function useBriefProgress() {
   const [step, setStep] = useState(0);
   const [leaving, setLeaving] = useState(false);
 
@@ -27,11 +27,23 @@ export function BriefProgressBadge() {
     return () => window.clearTimeout(swap);
   }, [leaving]);
 
+  return { step, leaving };
+}
+
+export function BriefProgressLabel({
+  className,
+  live = false,
+}: {
+  className?: string;
+  live?: boolean;
+}) {
+  const { step, leaving } = useBriefProgress();
+
   return (
-    <Badge
-      tone="primary"
-      className="min-w-[7.5rem] justify-center overflow-hidden"
-      aria-live="polite"
+    <span
+      className={cn("inline-flex overflow-hidden", className)}
+      aria-live={live ? "polite" : undefined}
+      aria-hidden={live ? undefined : true}
     >
       <span
         key={step}
@@ -47,6 +59,14 @@ export function BriefProgressBadge() {
           <span className="animate-status-dot [animation-delay:320ms]">.</span>
         </span>
       </span>
+    </span>
+  );
+}
+
+export function BriefProgressBadge() {
+  return (
+    <Badge tone="primary" className="min-w-[7.5rem] justify-center overflow-hidden">
+      <BriefProgressLabel live />
     </Badge>
   );
 }

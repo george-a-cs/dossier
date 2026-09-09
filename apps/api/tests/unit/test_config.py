@@ -17,9 +17,11 @@ def test_defaults_when_env_empty(monkeypatch) -> None:
         monkeypatch.delenv(key, raising=False)
 
     settings = Settings(_env_file=None)
-    assert settings.llm_base_url.endswith("/v1")
+    assert settings.llm_base_url == ""
     assert settings.llm_api_key == ""
-    assert settings.llm_model == "researcher-internal"
+    assert settings.llm_model == ""
+    assert settings.bootstrap_admin_email == ""
+    assert settings.bootstrap_admin_password == ""
     assert settings.resolved_embedding_base_url() == settings.llm_base_url
     assert settings.resolved_embedding_api_key() == ""
     assert settings.cors_origin == "http://localhost:3000"

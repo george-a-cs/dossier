@@ -32,8 +32,10 @@ def hash_token(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
-def bootstrap_admin(repo: Repository, settings: Settings) -> User:
+def bootstrap_admin(repo: Repository, settings: Settings) -> User | None:
     email = normalize_email(settings.bootstrap_admin_email)
+    if not email or not settings.bootstrap_admin_password:
+        return None
     existing = repo.get_user_by_email(email)
     if existing:
         return existing

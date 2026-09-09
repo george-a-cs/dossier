@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  CITE_MARK_CLASS,
+  matchSheetCells,
+  splitHighlight,
+  type HighlightQuery,
+} from "@/lib/cite-highlight";
 import { cn } from "@/lib/cn";
 import {
   encodeAddr,
@@ -17,6 +23,9 @@ export function SpreadsheetPreview({
   onSheet,
   onSheetCount,
   kind = "workbook",
+  highlight,
+  passage,
+  sheetHint,
   onBusy,
   zoom = 100,
 }: {
@@ -25,12 +34,17 @@ export function SpreadsheetPreview({
   onSheet: (index: number) => void;
   onSheetCount: (count: number) => void;
   kind?: SheetKind;
+  highlight?: HighlightQuery;
+  passage?: string | null;
+  sheetHint?: number | null;
   onBusy?: (label: string | null) => void;
   zoom?: number;
 }) {
   const [sheets, setSheets] = useState<SheetView[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [selected, setSelected] = useState({ row: 0, col: 0 });
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const jumpedRef = useRef("");
 
   useEffect(() => {
     let cancelled = false;
@@ -62,9 +76,59 @@ export function SpreadsheetPreview({
   }, [data, kind, onSheetCount]);
 
   const current = sheets[sheet - 1] ?? sheets[0];
+  const hits = useMemo(
+    () =>
+      matchSheetCells(
+        sheets.map((item) => ({
+          name: item.name,
+          cells: item.cells.map((row) => row.map((cell) => cell?.text ?? "")),
+        })),
+        highlight,
+        passage,
+        sheetHint,
+      ),
+    [sheets, highlight, passage, sheetHint],
+  );
+  const hitKeys = useMemo(() => {
+    const keys = new Set<string>();
+    for (const hit of hits) {
+      if (hit.sheet === sheet) keys.add(`${hit.row}:${hit.col}`);
+    }
+    return keys;
+  }, [hits, sheet]);
+  const hitSheets = useMemo(() => new Set(hits.map((hit) => hit.sheet)), [hits]);
+  const firstHit = hits[0] ?? null;
+  const jumpKey = firstHit
+    ? `${firstHit.sheet}:${firstHit.row}:${firstHit.col}:${JSON.stringify(highlight)}:${passage ?? ""}`
+    : "";
+
   useEffect(() => {
-    setSelected({ row: 0, col: 0 });
-  }, [sheet]);
+    jumpedRef.current = "";
+  }, [data]);
+
+  useEffect(() => {
+    if (!firstHit || !jumpKey || jumpedRef.current === jumpKey) return;
+    if (firstHit.sheet !== sheet) {
+      onSheet(firstHit.sheet);
+      return;
+    }
+    jumpedRef.current = jumpKey;
+  }, [firstHit, jumpKey, onSheet, sheet]);
+
+  useEffect(() => {
+    const local = hits.find((hit) => hit.sheet === sheet);
+    setSelected(local ? { row: local.row, col: local.col } : { row: 0, col: 0 });
+  }, [hits, sheet]);
+
+  useEffect(() => {
+    if (!hitKeys.size) return;
+    const timer = window.setTimeout(() => {
+      const mark = scrollRef.current?.querySelector<HTMLElement>("[data-cite-hl]");
+      mark?.scrollIntoView({ block: "center", inline: "center" });
+    }, 80);
+    return () => window.clearTimeout(timer);
+  }, [hitKeys, sheet]);
+
   const active = current?.cells[selected.row]?.[selected.col] ?? null;
   const address = current ? encodeAddr(selected.row, selected.col) : "A1";
 
@@ -129,7 +193,7 @@ export function SpreadsheetPreview({
         </span>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-auto">
+      <div ref={scrollRef} className="min-h-0 flex-1 overflow-auto">
         <table
           className="xls-grid border-separate border-spacing-0"
           style={{ zoom: zoom / 100 }}
@@ -159,20 +223,40 @@ export function SpreadsheetPreview({
                   if (span === "skip") return null;
                   const cell = current.cells[row][col];
                   const isActive = selected.row === row && selected.col === col;
+                  const isHit = hitKeys.has(`${row}:${col}`);
+                  const isFirstHit = Boolean(
+                    firstHit && firstHit.sheet === sheet && firstHit.row === row && firstHit.col === col,
+                  );
+                  const text = cell?.text ?? "";
                   return (
                     <td
                       key={col}
                       rowSpan={span?.rowspan}
                       colSpan={span?.colspan}
+                      data-cite-hl={isFirstHit ? "" : undefined}
                       onClick={() => setSelected({ row, col })}
-                      className={cn("xls-cell", isActive && "xls-cell-active")}
+                      className={cn(
+                        "xls-cell",
+                        isActive && "xls-cell-active",
+                        isHit && "xls-cell-hl",
+                      )}
                       style={{
                         ...cell?.style,
                         width: current.colWidths[col],
                         minWidth: current.colWidths[col],
                       }}
                     >
-                      {cell?.text}
+                      {isHit
+                        ? splitHighlight(text, highlight, passage).map((part, index) =>
+                            part.hit ? (
+                              <mark key={index} className={CITE_MARK_CLASS}>
+                                {part.text}
+                              </mark>
+                            ) : (
+                              part.text
+                            ),
+                          )
+                        : text}
                     </td>
                   );
                 })}
@@ -186,12 +270,18 @@ export function SpreadsheetPreview({
         {sheets.map((item, index) => {
           const number = index + 1;
           const activeSheet = number === sheet;
+          const cited = hitSheets.has(number);
           return (
             <button
               key={item.name}
               type="button"
+              data-cite-thumb={cited ? "" : undefined}
               onClick={() => onSheet(number)}
-              className={cn("xls-tab", activeSheet && "xls-tab-active")}
+              className={cn(
+                "xls-tab",
+                activeSheet && "xls-tab-active",
+                cited && !activeSheet && "xls-tab-hit",
+              )}
             >
               {item.name}
             </button>

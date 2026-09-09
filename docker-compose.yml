@@ -11,21 +11,24 @@ services:
       dockerfile: apps/api/Dockerfile
     ports:
       - "${API_HOST_PORT:-18471}:8000"
+    env_file:
+      - path: .env
+        required: false
     environment:
       SERVICE_URL_API_8000: ""
       DATABASE_PATH: /data/dossier.db
       FILES_DIR: /data/files
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:18470,http://127.0.0.1:18470,http://localhost:3000,http://127.0.0.1:3000}
-      LLM_BASE_URL: ${LLM_BASE_URL:-https://gravi-lab-ollama.gravitonic.uk/v1}
-      LLM_API_KEY: ${LLM_API_KEY:-}
-      LLM_MODEL: ${LLM_MODEL:-researcher-internal}
-      VISION_MODEL: ${VISION_MODEL:-vision-docs-reasoning}
-      EMBEDDING_BASE_URL: ${EMBEDDING_BASE_URL:-}
-      EMBEDDING_API_KEY: ${EMBEDDING_API_KEY:-}
-      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-}
-      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-george@csegoldi.com}
-      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-Lets_Check@SomethingElse}
-      BOOTSTRAP_ADMIN_NAME: ${BOOTSTRAP_ADMIN_NAME:-George}
+      LLM_BASE_URL: ${LLM_BASE_URL}
+      LLM_API_KEY: ${LLM_API_KEY}
+      LLM_MODEL: ${LLM_MODEL}
+      VISION_MODEL: ${VISION_MODEL}
+      EMBEDDING_BASE_URL: ${EMBEDDING_BASE_URL}
+      EMBEDDING_API_KEY: ${EMBEDDING_API_KEY}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL}
+      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD}
+      BOOTSTRAP_ADMIN_NAME: ${BOOTSTRAP_ADMIN_NAME}
       PRICE_EMBED_PER_1M: ${PRICE_EMBED_PER_1M:-0}
       PRICE_LLM_IN_PER_1M: ${PRICE_LLM_IN_PER_1M:-0}
       PRICE_LLM_OUT_PER_1M: ${PRICE_LLM_OUT_PER_1M:-0}

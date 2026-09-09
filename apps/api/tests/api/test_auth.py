@@ -18,6 +18,20 @@ def test_only_login_and_health_are_public() -> None:
     assert not is_public_request("GET", "/docs")
 
 
+def test_bootstrap_skipped_without_env(tmp_path: Path) -> None:
+    settings = make_settings(
+        tmp_path,
+        bootstrap_admin_email="",
+        bootstrap_admin_password="",
+    )
+    client = TestClient(create_app(settings))
+    response = client.post(
+        "/auth/login",
+        json={"email": ADMIN_EMAIL, "password": ADMIN_PASSWORD},
+    )
+    assert response.status_code == 401
+
+
 def test_bootstrap_admin_can_log_in(tmp_path: Path) -> None:
     client = make_client(tmp_path, auth=False)
     response = client.post(

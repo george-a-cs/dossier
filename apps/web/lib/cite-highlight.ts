@@ -460,6 +460,76 @@ export function matchPagedRuns(
   );
 }
 
+export type SheetHit = {
+  sheet: number;
+  row: number;
+  col: number;
+};
+
+type CellSpan = {
+  row: number;
+  col: number;
+  start: number;
+  end: number;
+};
+
+function flattenSheet(
+  name: string,
+  cells: (string | null | undefined)[][],
+): { text: string; spans: CellSpan[] } {
+  let text = name ? `# ${name}\n` : "";
+  const spans: CellSpan[] = [];
+  cells.forEach((row, rowIndex) => {
+    row.forEach((value, colIndex) => {
+      if (colIndex > 0) text += "\t";
+      const start = text.length;
+      text += value ?? "";
+      spans.push({ row: rowIndex, col: colIndex, start, end: text.length });
+    });
+    text += "\n";
+  });
+  return { text, spans };
+}
+
+/** Cells whose displayed text matches the query, preferring the cited sheet passage. */
+export function matchSheetCells(
+  sheets: { name?: string; cells: (string | null | undefined)[][] }[],
+  query?: HighlightQuery,
+  passage?: string | null,
+  sheetHint?: number | null,
+): SheetHit[] {
+  const terms = asTerms(query, passage);
+  if (!terms.length) return [];
+
+  const perSheet = sheets.map((sheet, index) => {
+    const { text, spans } = flattenSheet(sheet.name ?? "", sheet.cells);
+    const window = passage?.trim() ? locatePassage(text, passage) : null;
+    const termHits = window
+      ? findTermHits(text, terms).filter((hit) => hit.start < window.end && hit.end > window.start)
+      : findTermHits(text, terms);
+    const seen = new Set<string>();
+    const hits: SheetHit[] = [];
+    for (const hit of termHits) {
+      for (const span of spans) {
+        if (span.end <= span.start) continue;
+        if (hit.start >= span.end || hit.end <= span.start) continue;
+        const key = `${span.row}:${span.col}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        hits.push({ sheet: index + 1, row: span.row, col: span.col });
+      }
+    }
+    return { sheet: index + 1, usedWindow: Boolean(window), hits };
+  });
+
+  const windowed = perSheet.filter((leaf) => leaf.usedWindow);
+  const chosen = windowed.length
+    ? windowed
+    : perSheet.filter((leaf) => (sheetHint ? leaf.sheet === sheetHint : true));
+
+  return chosen.flatMap((leaf) => leaf.hits);
+}
+
 export function matchImageBoxes(
   boxes: ImageBox[],
   query?: HighlightQuery,
@@ -503,6 +573,11 @@ function wrapRange(node: Text, start: number, end: number): HTMLElement {
   return mark;
 }
 
+function skipHighlightNode(node: Node): boolean {
+  const el = node instanceof HTMLElement ? node : node.parentElement;
+  return Boolean(el?.closest("header, footer, style, script"));
+}
+
 export function highlightDom(
   root: HTMLElement,
   query?: HighlightQuery,
@@ -512,11 +587,16 @@ export function highlightDom(
   const terms = asTerms(query, passage);
   if (!terms.length) return null;
 
-  const walker = window.document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const walker = window.document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode(node) {
+      if (!node.textContent || skipHighlightNode(node)) return NodeFilter.FILTER_REJECT;
+      return NodeFilter.FILTER_ACCEPT;
+    },
+  });
   const nodes: Text[] = [];
   let current: Node | null = walker.nextNode();
   while (current) {
-    if (current.textContent) nodes.push(current as Text);
+    nodes.push(current as Text);
     current = walker.nextNode();
   }
 

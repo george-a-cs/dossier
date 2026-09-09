@@ -18,7 +18,7 @@ import { useDocuments } from "@/lib/use-documents";
 import { ConfirmDeleteModal } from "@/components/ui/ConfirmDeleteModal";
 import { EditDocumentModal } from "@/components/library/EditDocumentModal";
 import { FilePreview } from "@/components/library/FilePreview";
-import { BriefProgressBadge } from "./BriefProgressBadge";
+import { BriefProgressBadge, BriefProgressLabel } from "./BriefProgressBadge";
 import { DebugDrawer } from "./DebugDrawer";
 import { FoundDocumentCta } from "./FoundDocumentCta";
 
@@ -254,10 +254,16 @@ export function BriefComposer({ briefId }: { briefId?: string }) {
                     turn.final?.refused ? "text-danger" : ""
                   }`}
                 >
-                  {turn.final?.text ?? turn.answer}
-                  {busy && index === turns.length - 1 && !turn.final ? (
-                    <span className="ml-0.5 inline-block h-4 w-[0.45em] animate-caret bg-ink" />
-                  ) : null}
+                  {busy && index === turns.length - 1 && !turn.final && !turn.answer ? (
+                    <BriefProgressLabel className="text-muted" />
+                  ) : (
+                    <>
+                      {turn.final?.text ?? turn.answer}
+                      {busy && index === turns.length - 1 && !turn.final ? (
+                        <span className="ml-0.5 inline-block h-4 w-[0.45em] animate-caret bg-ink" />
+                      ) : null}
+                    </>
+                  )}
                 </p>
               </div>
 

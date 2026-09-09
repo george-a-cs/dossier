@@ -2,7 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
-import { highlightDom, type HighlightQuery } from "@/lib/cite-highlight";
+import {
+  CITE_MARK_CLASS,
+  highlightDom,
+  splitHighlight,
+  type HighlightQuery,
+} from "@/lib/cite-highlight";
 import { usePagedScroll } from "../usePagedScroll";
 
 type Thumb = {
@@ -45,6 +50,7 @@ export function DocxPreview({
   filename,
   highlight,
   passage,
+  fallbackText,
   onBusy,
   zoom = 100,
 }: {
@@ -55,6 +61,7 @@ export function DocxPreview({
   filename?: string;
   highlight?: HighlightQuery;
   passage?: string | null;
+  fallbackText?: string | null;
   onBusy?: (label: string | null) => void;
   zoom?: number;
 }) {
@@ -109,6 +116,7 @@ export function DocxPreview({
 
   useEffect(() => {
     const host = hostRef.current;
+    const scroll = scrollRef.current;
     if (!host || !ready) return;
     const mark = highlightDom(host, highlight, passage);
     const pages = pageNodes(host);
@@ -120,8 +128,17 @@ export function DocxPreview({
         height: node.offsetHeight || 1,
       })),
     );
-    mark?.scrollIntoView({ block: "center", inline: "nearest" });
-  }, [highlight, passage, ready]);
+    if (!mark || !scroll) return;
+    const timer = window.setTimeout(() => {
+      const box = scroll.getBoundingClientRect();
+      const rect = mark.getBoundingClientRect();
+      scroll.scrollTo({
+        top: scroll.scrollTop + rect.top - box.top - box.height * 0.35,
+        left: Math.max(0, scroll.scrollLeft + rect.left - box.left - box.width * 0.15),
+      });
+    }, 80);
+    return () => window.clearTimeout(timer);
+  }, [highlight, passage, ready, zoom]);
 
   useEffect(() => {
     const scroll = scrollRef.current;
@@ -155,6 +172,31 @@ export function DocxPreview({
     onBusy?.(error ? null : ready ? null : "Opening document…");
     return () => onBusy?.(null);
   }, [error, ready, onBusy]);
+
+  useEffect(() => {
+    if (error && fallbackText?.trim()) onPageCount(1);
+  }, [error, fallbackText, onPageCount]);
+
+  if (error && fallbackText?.trim()) {
+    return (
+      <div className="flex min-h-0 flex-1 flex-col gap-3">
+        <p className="m-0 text-sm text-muted">{error}</p>
+        <div className="preview-paper min-h-0 flex-1 overflow-auto rounded-[16px] bg-white px-4 py-6 shadow-md lg:px-8 lg:py-10">
+          <p className="m-0 whitespace-pre-wrap text-[15px] leading-7" style={{ zoom: zoom / 100 }}>
+            {splitHighlight(fallbackText, highlight, passage).map((part, index) =>
+              part.hit ? (
+                <mark key={index} className={CITE_MARK_CLASS}>
+                  {part.text}
+                </mark>
+              ) : (
+                part.text
+              ),
+            )}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (error) return <p className="text-sm text-danger">{error}</p>;
 

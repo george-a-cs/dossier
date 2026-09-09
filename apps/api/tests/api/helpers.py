@@ -14,6 +14,9 @@ def make_settings(tmp_path: Path, **overrides) -> Settings:
         "database_path": tmp_path / "app.db",
         "files_dir": tmp_path / "files",
         "auto_seed": False,
+        "bootstrap_admin_email": ADMIN_EMAIL,
+        "bootstrap_admin_password": ADMIN_PASSWORD,
+        "bootstrap_admin_name": "George",
         "_env_file": None,
     }
     values.update(overrides)

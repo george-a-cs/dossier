@@ -13,9 +13,9 @@ class Settings(BaseSettings):
         env_ignore_empty=True,
     )
 
-    llm_base_url: str = "https://gravi-lab-ollama.gravitonic.uk/v1"
+    llm_base_url: str = ""
     llm_api_key: str = ""
-    llm_model: str = "researcher-internal"
+    llm_model: str = ""
 
     embedding_base_url: str = ""
     embedding_api_key: str = ""
@@ -30,9 +30,9 @@ class Settings(BaseSettings):
     files_dir: Path = Field(default=Path("./data/files"))
     auto_seed: bool = True
 
-    bootstrap_admin_email: str = "george@csegoldi.com"
-    bootstrap_admin_password: str = "Lets_Check@SomethingElse"
-    bootstrap_admin_name: str = "George"
+    bootstrap_admin_email: str = ""
+    bootstrap_admin_password: str = ""
+    bootstrap_admin_name: str = ""
 
     # Self-hosted default is free. Set these to list prices if you switch to OpenAI.
     price_embed_per_1m: float = 0.0
