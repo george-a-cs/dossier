@@ -5,7 +5,12 @@ from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from dossier.api.deps import require_user, seed_bootstrap_admin, seed_default_corpus
+from dossier.api.deps import (
+    require_user,
+    seed_bootstrap_admin,
+    seed_default_corpus,
+    seed_orphan_briefs,
+)
 from dossier.api.middleware import AuthGateMiddleware, RequestIdMiddleware
 from dossier.api.routes_auth import router as auth_router
 from dossier.api.routes_brief import router as brief_router
@@ -48,6 +53,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return JSONResponse(status_code=500, content={"detail": "Internal server error"})
 
     seed_bootstrap_admin(settings)
+    seed_orphan_briefs(settings)
     seed_default_corpus(settings)
 
     app.include_router(health_router)

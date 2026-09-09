@@ -25,7 +25,7 @@ function readView(): ViewMode {
 
 export function BriefsList() {
   const router = useRouter();
-  const briefs = useBriefs();
+  const { briefs, loading, refresh } = useBriefs();
   const [query, setQuery] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [view, setView] = useState<ViewMode>("cards");
@@ -89,7 +89,9 @@ export function BriefsList() {
         />
       </FilterPanel>
 
-      {!briefs.length ? (
+      {loading ? (
+        <p className="text-sm text-muted">Loading briefs…</p>
+      ) : !briefs.length ? (
         <EmptyState
           icon={<IconBrief className="h-8 w-8" />}
           title="No briefs yet"
@@ -128,8 +130,10 @@ export function BriefsList() {
         onCancel={() => setPending(null)}
         onConfirm={() => {
           if (!pending) return;
-          deleteBrief(pending.id);
-          setPending(null);
+          void deleteBrief(pending.id).then(() => {
+            setPending(null);
+            void refresh();
+          });
         }}
       />
     </div>

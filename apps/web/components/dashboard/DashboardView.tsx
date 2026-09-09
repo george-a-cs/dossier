@@ -22,7 +22,7 @@ const ACTIVITY_PREVIEW = 5;
 export function DashboardView() {
   const router = useRouter();
   const { documents, loading, refresh } = useDocuments();
-  const briefs = useBriefs();
+  const { briefs } = useBriefs();
   const [events, setEvents] = useState<QueryEvent[]>([]);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [activityOpen, setActivityOpen] = useState(false);

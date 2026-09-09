@@ -7,6 +7,8 @@ import type {
   Document,
   OcrBox,
   QueryEvent,
+  SavedBrief,
+  SavedTurn,
 } from "./types";
 
 export function apiUrl(): string {
@@ -259,6 +261,62 @@ export async function briefStream(
       if (event === "token") handlers.onToken(data.t as string);
       if (event === "final") handlers.onFinal(data as BriefFinal);
     }
+  }
+}
+
+type ApiBrief = {
+  id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+  conversation_id: string;
+  turns: SavedTurn[];
+};
+
+function toSavedBrief(row: ApiBrief): SavedBrief {
+  return {
+    id: row.id,
+    title: row.title,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    conversationId: row.conversation_id,
+    turns: Array.isArray(row.turns) ? row.turns : [],
+  };
+}
+
+export async function listBriefs(): Promise<SavedBrief[]> {
+  const rows = await json<ApiBrief[]>(await request("/briefs"));
+  return rows.map(toSavedBrief);
+}
+
+export async function getBrief(id: string): Promise<SavedBrief | null> {
+  const response = await request(`/briefs/${id}`);
+  if (response.status === 404) return null;
+  return toSavedBrief(await json<ApiBrief>(response));
+}
+
+export async function putBrief(brief: SavedBrief): Promise<SavedBrief> {
+  return toSavedBrief(
+    await json<ApiBrief>(
+      await request(`/briefs/${brief.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: brief.title,
+          conversation_id: brief.conversationId,
+          collection_id: "default",
+          created_at: brief.createdAt,
+          turns: brief.turns,
+        }),
+      }),
+    ),
+  );
+}
+
+export async function deleteBrief(id: string): Promise<void> {
+  const response = await request(`/briefs/${id}`, { method: "DELETE" });
+  if (!response.ok && response.status !== 404) {
+    throw new Error(await readDetail(response));
   }
 }
 

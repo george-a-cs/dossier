@@ -1,66 +1,86 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import {
+  deleteBrief as deleteBriefApi,
+  getBrief as getBriefApi,
+  listBriefs as listBriefsApi,
+  putBrief,
+} from "./api";
 import type { SavedBrief } from "./types";
 
-const KEY = "dossier.briefs.v1";
+const LEGACY_KEY = "dossier.briefs.v1";
 const listeners = new Set<() => void>();
+let migrateOnce: Promise<void> | null = null;
 
-function read(): SavedBrief[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = window.localStorage.getItem(KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as SavedBrief[];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-function write(briefs: SavedBrief[]): void {
-  window.localStorage.setItem(KEY, JSON.stringify(briefs));
+function notify(): void {
   listeners.forEach((listen) => listen());
 }
 
-export function listBriefs(): SavedBrief[] {
-  return read().sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+async function migrateLocalBriefs(): Promise<void> {
+  if (typeof window === "undefined") return;
+  const raw = window.localStorage.getItem(LEGACY_KEY);
+  if (!raw) return;
+  try {
+    const parsed = JSON.parse(raw) as SavedBrief[];
+    if (!Array.isArray(parsed) || !parsed.length) {
+      window.localStorage.removeItem(LEGACY_KEY);
+      return;
+    }
+    await Promise.all(parsed.map((brief) => putBrief(brief)));
+    window.localStorage.removeItem(LEGACY_KEY);
+  } catch {
+    /* keep the local copy if the import failed */
+  }
 }
 
-export function getBrief(id: string): SavedBrief | null {
-  return read().find((brief) => brief.id === id) ?? null;
+export async function listBriefs(): Promise<SavedBrief[]> {
+  return listBriefsApi();
 }
 
-export function upsertBrief(next: SavedBrief): SavedBrief {
-  const briefs = read().filter((brief) => brief.id !== next.id);
-  briefs.push(next);
-  write(briefs);
-  return next;
+export async function getBrief(id: string): Promise<SavedBrief | null> {
+  return getBriefApi(id);
 }
 
-export function deleteBrief(id: string): void {
-  write(read().filter((brief) => brief.id !== id));
+export async function deleteBrief(id: string): Promise<void> {
+  await deleteBriefApi(id);
+  notify();
 }
 
-export function useBriefs(): SavedBrief[] {
+export function notifyBriefsChanged(): void {
+  notify();
+}
+
+export function useBriefs(): {
+  briefs: SavedBrief[];
+  loading: boolean;
+  refresh: () => Promise<void>;
+} {
   const [briefs, setBriefs] = useState<SavedBrief[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const sync = () => setBriefs(listBriefs());
-    sync();
-    listeners.add(sync);
-    window.addEventListener("storage", sync);
-    return () => {
-      listeners.delete(sync);
-      window.removeEventListener("storage", sync);
-    };
+  const refresh = useCallback(async () => {
+    try {
+      setBriefs(await listBriefsApi());
+    } catch {
+      setBriefs([]);
+    }
   }, []);
 
-  return briefs;
-}
+  useEffect(() => {
+    const sync = () => {
+      void refresh();
+    };
+    listeners.add(sync);
+    if (!migrateOnce) migrateOnce = migrateLocalBriefs();
+    migrateOnce
+      .catch(() => undefined)
+      .then(refresh)
+      .finally(() => setLoading(false));
+    return () => {
+      listeners.delete(sync);
+    };
+  }, [refresh]);
 
-export function useBrief(id: string | null): SavedBrief | null {
-  const briefs = useBriefs();
-  if (!id) return null;
-  return briefs.find((brief) => brief.id === id) ?? null;
+  return { briefs, loading, refresh };
 }

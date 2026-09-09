@@ -81,6 +81,10 @@ def test_protected_routes_require_auth(tmp_path: Path) -> None:
         client.post("/collections/default/brief", json={"question": "Hi"}),
         client.get("/collections/default/events"),
         client.get("/chunks/missing"),
+        client.get("/briefs"),
+        client.get("/briefs/missing"),
+        client.put("/briefs/missing", json={"turns": []}),
+        client.delete("/briefs/missing"),
     ]
     assert all(response.status_code == 401 for response in blocked)
 

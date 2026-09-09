@@ -89,6 +89,18 @@ class Session:
 
 
 @dataclass(frozen=True)
+class Brief:
+    id: str
+    user_id: str
+    collection_id: str
+    conversation_id: str
+    title: str
+    turns: list[dict]
+    created_at: str
+    updated_at: str
+
+
+@dataclass(frozen=True)
 class QueryEvent:
     id: str
     request_id: str
@@ -175,9 +187,31 @@ class Repository(Protocol):
 
     def create_conversation(self, *, id: str, collection_id: str) -> None: ...
 
+    def ensure_conversation(self, *, id: str, collection_id: str) -> None: ...
+
     def add_message(self, *, conversation_id: str, role: str, content: str) -> None: ...
 
     def list_recent_messages(self, conversation_id: str, limit: int = 4) -> list[ChatMessage]: ...
+
+    def get_brief(self, id: str) -> Brief | None: ...
+
+    def list_briefs(self, user_id: str) -> list[Brief]: ...
+
+    def upsert_brief(
+        self,
+        *,
+        id: str,
+        user_id: str,
+        collection_id: str,
+        conversation_id: str,
+        title: str,
+        turns: list[dict],
+        created_at: str | None = None,
+    ) -> Brief: ...
+
+    def delete_brief(self, id: str, user_id: str) -> bool: ...
+
+    def backfill_orphan_briefs(self) -> int: ...
 
     def create_user(
         self,

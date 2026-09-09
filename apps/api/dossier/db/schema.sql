@@ -89,3 +89,17 @@ CREATE TABLE IF NOT EXISTS sessions (
     expires_at TEXT NOT NULL,
     created_at TEXT NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS briefs (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    collection_id TEXT NOT NULL REFERENCES collections(id),
+    conversation_id TEXT NOT NULL REFERENCES conversations(id),
+    title TEXT NOT NULL,
+    turns TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS briefs_user_updated
+    ON briefs (user_id, updated_at DESC);

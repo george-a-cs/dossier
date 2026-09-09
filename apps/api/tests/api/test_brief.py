@@ -76,6 +76,17 @@ def test_grounded_brief(tmp_path: Path) -> None:
     assert events.status_code == 200
     assert events.json()[0]["refused"] is False
     assert events.json()[0]["citation_valid"] is True
+    briefs = client.get("/briefs")
+    assert briefs.status_code == 200
+    assert len(briefs.json()) == 1
+    saved = briefs.json()[0]
+    assert saved["conversation_id"] == final["conversation_id"]
+    assert saved["title"] == "What is the recommended dose?"
+    assert saved["turns"][0]["question"] == "What is the recommended dose?"
+    assert saved["turns"][0]["final"]["citations"][0]["chunk_id"] == chunk_id
+    one = client.get(f"/briefs/{saved['id']}")
+    assert one.status_code == 200
+    assert one.json()["id"] == saved["id"]
 
 
 def test_bogus_cite_refuses(tmp_path: Path) -> None:

@@ -10,6 +10,7 @@ from functools import wraps
 
 from dossier.db.connection import ensure_vec_table
 from dossier.ports.repository import (
+    Brief,
     ChatMessage,
     Chunk,
     ChunkWithEmbedding,
@@ -74,6 +75,74 @@ def _chunk_from_row(row: sqlite3.Row) -> Chunk:
         page_end=row["page_end"],
         section_title=row["section_title"],
     )
+
+
+def _brief_title(question: str, max_len: int = 72) -> str:
+    trimmed = question.strip() or "Brief"
+    if len(trimmed) <= max_len:
+        return trimmed
+    return f"{trimmed[: max_len - 1].rstrip()}…"
+
+
+def _brief_from_row(row: sqlite3.Row) -> Brief:
+    raw = row["turns"]
+    try:
+        turns = json.loads(raw)
+    except (TypeError, json.JSONDecodeError):
+        turns = []
+    if not isinstance(turns, list):
+        turns = []
+    return Brief(
+        id=row["id"],
+        user_id=row["user_id"],
+        collection_id=row["collection_id"],
+        conversation_id=row["conversation_id"],
+        title=row["title"],
+        turns=turns,
+        created_at=row["created_at"],
+        updated_at=row["updated_at"],
+    )
+
+
+def _turns_from_messages(conn: sqlite3.Connection, conversation_id: str) -> list[dict]:
+    rows = conn.execute(
+        """
+        SELECT role, content FROM messages
+        WHERE conversation_id = ?
+        ORDER BY created_at
+        """,
+        (conversation_id,),
+    ).fetchall()
+    turns: list[dict] = []
+    pending: str | None = None
+    for row in rows:
+        if row["role"] == "user":
+            pending = row["content"]
+            continue
+        if row["role"] == "assistant" and pending is not None:
+            text = row["content"]
+            turns.append(
+                {
+                    "question": pending,
+                    "answer": text,
+                    "final": {
+                        "text": text,
+                        "citations": [],
+                        "refused": text.strip() == "Not in this dossier.",
+                        "retrieval_ids": [],
+                        "conversation_id": conversation_id,
+                        "stats": {
+                            "embed_ms": 0,
+                            "retrieve_ms": 0,
+                            "llm_ms": 0,
+                            "tokens_in": 0,
+                            "tokens_out": 0,
+                        },
+                    },
+                }
+            )
+            pending = None
+    return turns
 
 
 _CONNECTION_LOCKS: dict[int, threading.RLock] = {}
@@ -476,6 +545,16 @@ class SqliteRepository:
         self._conn.commit()
 
     @_locked
+    def ensure_conversation(self, *, id: str, collection_id: str) -> None:
+        row = self._conn.execute(
+            "SELECT id FROM conversations WHERE id = ?",
+            (id,),
+        ).fetchone()
+        if row is not None:
+            return
+        self.create_conversation(id=id, collection_id=collection_id)
+
+    @_locked
     def add_message(self, *, conversation_id: str, role: str, content: str) -> None:
         self._conn.execute(
             """
@@ -498,6 +577,118 @@ class SqliteRepository:
             (conversation_id, limit),
         ).fetchall()
         return [ChatMessage(role=row["role"], content=row["content"]) for row in reversed(rows)]
+
+    @_locked
+    def get_brief(self, id: str) -> Brief | None:
+        row = self._conn.execute("SELECT * FROM briefs WHERE id = ?", (id,)).fetchone()
+        return _brief_from_row(row) if row else None
+
+    @_locked
+    def list_briefs(self, user_id: str) -> list[Brief]:
+        rows = self._conn.execute(
+            """
+            SELECT * FROM briefs
+            WHERE user_id = ?
+            ORDER BY updated_at DESC
+            """,
+            (user_id,),
+        ).fetchall()
+        return [_brief_from_row(row) for row in rows]
+
+    @_locked
+    def upsert_brief(
+        self,
+        *,
+        id: str,
+        user_id: str,
+        collection_id: str,
+        conversation_id: str,
+        title: str,
+        turns: list[dict],
+        created_at: str | None = None,
+    ) -> Brief:
+        now = _now()
+        existing = self._conn.execute(
+            "SELECT created_at FROM briefs WHERE id = ?",
+            (id,),
+        ).fetchone()
+        created = created_at or (existing["created_at"] if existing else now)
+        payload = json.dumps(turns)
+        if existing:
+            self._conn.execute(
+                """
+                UPDATE briefs
+                SET user_id = ?, collection_id = ?, conversation_id = ?,
+                    title = ?, turns = ?, updated_at = ?
+                WHERE id = ?
+                """,
+                (user_id, collection_id, conversation_id, title, payload, now, id),
+            )
+        else:
+            self._conn.execute(
+                """
+                INSERT INTO briefs (
+                    id, user_id, collection_id, conversation_id,
+                    title, turns, created_at, updated_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (id, user_id, collection_id, conversation_id, title, payload, created, now),
+            )
+        self._conn.commit()
+        stored = self.get_brief(id)
+        assert stored is not None
+        return stored
+
+    @_locked
+    def delete_brief(self, id: str, user_id: str) -> bool:
+        cursor = self._conn.execute(
+            "DELETE FROM briefs WHERE id = ? AND user_id = ?",
+            (id, user_id),
+        )
+        self._conn.commit()
+        return cursor.rowcount > 0
+
+    @_locked
+    def backfill_orphan_briefs(self) -> int:
+        owner = self._conn.execute(
+            """
+            SELECT id FROM users
+            WHERE role = 'super_admin'
+            ORDER BY created_at
+            LIMIT 1
+            """
+        ).fetchone()
+        if owner is None:
+            owner = self._conn.execute(
+                "SELECT id FROM users ORDER BY created_at LIMIT 1"
+            ).fetchone()
+        if owner is None:
+            return 0
+        orphans = self._conn.execute(
+            """
+            SELECT c.id, c.collection_id, c.created_at
+            FROM conversations c
+            LEFT JOIN briefs b ON b.conversation_id = c.id
+            WHERE b.id IS NULL
+            """
+        ).fetchall()
+        created = 0
+        for conversation in orphans:
+            turns = _turns_from_messages(self._conn, conversation["id"])
+            if not turns:
+                continue
+            title = _brief_title(str(turns[0].get("question") or "Brief"))
+            self.upsert_brief(
+                id=conversation["id"],
+                user_id=owner["id"],
+                collection_id=conversation["collection_id"],
+                conversation_id=conversation["id"],
+                title=title,
+                turns=turns,
+                created_at=conversation["created_at"],
+            )
+            created += 1
+        return created
 
     @_locked
     def create_user(

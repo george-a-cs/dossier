@@ -3,6 +3,7 @@ data/dossier.db
 data/dossier.db-*
 data/files/*
 !data/files/.gitkeep
+apps/api/data/
 node_modules
 .next
 __pycache__

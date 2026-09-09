@@ -90,6 +90,10 @@ def seed_bootstrap_admin(settings: Settings) -> None:
     bootstrap_admin(_repository(str(settings.database_path.resolve())), settings)
 
 
+def seed_orphan_briefs(settings: Settings) -> None:
+    _repository(str(settings.database_path.resolve())).backfill_orphan_briefs()
+
+
 def _embedding_dimensions(embeddings: Embeddings) -> int:
     try:
         return embeddings.dimensions

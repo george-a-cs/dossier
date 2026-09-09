@@ -11,9 +11,9 @@ import { PageHeader } from "@/components/ui/PageHeader";
 import { Textarea } from "@/components/ui/Textarea";
 import { briefStream, getChunk, getDocument, stripCiteTrailer } from "@/lib/api";
 import { uniqueFoundDocuments } from "@/lib/found-documents";
-import { deleteBrief, getBrief, upsertBrief } from "@/lib/briefs-store";
+import { deleteBrief, getBrief, notifyBriefsChanged } from "@/lib/briefs-store";
 import { formatMoney, formatMs, formatWhen, truncate } from "@/lib/format";
-import type { Citation, Document, SavedBrief, SavedTurn } from "@/lib/types";
+import type { Citation, Document, SavedTurn } from "@/lib/types";
 import { useDocuments } from "@/lib/use-documents";
 import { ConfirmDeleteModal } from "@/components/ui/ConfirmDeleteModal";
 import { EditDocumentModal } from "@/components/library/EditDocumentModal";
@@ -27,10 +27,6 @@ const EXAMPLES = [
   "Is there any X-ray related document?",
 ];
 
-function persist(brief: SavedBrief): SavedBrief {
-  return upsertBrief({ ...brief, updatedAt: new Date().toISOString() });
-}
-
 export function BriefComposer({ briefId }: { briefId?: string }) {
   const router = useRouter();
   const { documents, loading, refresh } = useDocuments();
@@ -43,6 +39,7 @@ export function BriefComposer({ briefId }: { briefId?: string }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(!briefId);
+  const [missing, setMissing] = useState(false);
   const [pendingDelete, setPendingDelete] = useState(false);
   const [previewDocId, setPreviewDocId] = useState<string | null>(null);
   const [previewChunkId, setPreviewChunkId] = useState<string | null>(null);
@@ -52,16 +49,30 @@ export function BriefComposer({ briefId }: { briefId?: string }) {
 
   useEffect(() => {
     if (!briefId) return;
-    const existing = getBrief(briefId);
-    if (!existing) {
-      setHydrated(true);
-      return;
-    }
-    setTurns(existing.turns);
-    setConversationId(existing.conversationId);
-    setTitle(existing.title);
-    setCreatedAt(existing.createdAt);
-    setHydrated(true);
+    let cancelled = false;
+    void getBrief(briefId)
+      .then((existing) => {
+        if (cancelled) return;
+        if (!existing) {
+          setMissing(true);
+          setHydrated(true);
+          return;
+        }
+        setTurns(existing.turns);
+        setConversationId(existing.conversationId);
+        setTitle(existing.title);
+        setCreatedAt(existing.createdAt);
+        setMissing(false);
+        setHydrated(true);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setMissing(true);
+        setHydrated(true);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [briefId]);
 
   const canAsk = ready && !busy;
@@ -99,16 +110,9 @@ export function BriefComposer({ briefId }: { briefId?: string }) {
               const updated = nextTurns(current);
               const id = final.conversation_id;
               const now = new Date().toISOString();
-              persist({
-                id,
-                title: truncate(updated[0]?.question || trimmed),
-                createdAt: createdAt ?? now,
-                updatedAt: now,
-                conversationId: id,
-                turns: updated,
-              });
               setTitle(truncate(updated[0]?.question || trimmed));
               setCreatedAt((value) => value ?? now);
+              notifyBriefsChanged();
               if (!briefId) {
                 router.replace(`/briefs/${id}`);
               }
@@ -147,12 +151,12 @@ export function BriefComposer({ briefId }: { briefId?: string }) {
     }
   }
 
-  if (briefId && hydrated && !getBrief(briefId) && !turns.length) {
+  if (briefId && hydrated && missing && !turns.length) {
     return (
       <EmptyState
         icon={<IconBrief className="h-8 w-8" />}
         title="Brief not found"
-        description="It may have been deleted in this browser."
+        description="It may have been deleted."
         actions={
           <Button variant="secondary" onClick={() => router.push("/briefs")}>
             Back to briefs
@@ -366,8 +370,7 @@ export function BriefComposer({ briefId }: { briefId?: string }) {
         onCancel={() => setPendingDelete(false)}
         onConfirm={() => {
           if (!conversationId) return;
-          deleteBrief(conversationId);
-          router.push("/briefs");
+          void deleteBrief(conversationId).then(() => router.push("/briefs"));
         }}
       />
 

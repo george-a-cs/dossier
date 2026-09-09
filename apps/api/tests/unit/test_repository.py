@@ -164,3 +164,42 @@ def test_shared_connection_is_thread_safe(tmp_path: Path) -> None:
 
     with ThreadPoolExecutor(8) as pool:
         list(pool.map(read, range(8)))
+
+
+def test_brief_roundtrip_and_backfill(tmp_path: Path) -> None:
+    repo = _repo(tmp_path)
+    repo.create_collection(
+        id="col-a", name="A", embedding_model="fake", embedding_dimensions=3
+    )
+    repo.create_user(
+        id="user-1",
+        name="George",
+        email="george@csegoldi.com",
+        password_hash="hashed",
+        role="super_admin",
+    )
+    repo.create_conversation(id="c1", collection_id="col-a")
+    saved = repo.upsert_brief(
+        id="c1",
+        user_id="user-1",
+        collection_id="col-a",
+        conversation_id="c1",
+        title="What is the dose?",
+        turns=[{"question": "What is the dose?", "answer": "10 mg", "final": None}],
+    )
+    assert saved.title == "What is the dose?"
+    assert repo.get_brief("c1") is not None
+    assert repo.list_briefs("user-1")[0].id == "c1"
+    assert repo.list_briefs("other") == []
+    assert repo.delete_brief("c1", "user-1") is True
+    assert repo.get_brief("c1") is None
+
+    repo.create_conversation(id="c2", collection_id="col-a")
+    repo.add_message(conversation_id="c2", role="user", content="Any X-ray?")
+    repo.add_message(conversation_id="c2", role="assistant", content="Not in this dossier.")
+    assert repo.backfill_orphan_briefs() == 1
+    orphan = repo.get_brief("c2")
+    assert orphan is not None
+    assert orphan.user_id == "user-1"
+    assert orphan.turns[0]["final"]["refused"] is True
+    assert repo.backfill_orphan_briefs() == 0
