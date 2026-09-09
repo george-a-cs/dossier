@@ -55,6 +55,18 @@ In the desk: the demo files are already in the library. Ask “What is the recom
 
 Default LLM host is an OpenAI-compatible ollama-swap (`LLM_BASE_URL` + `LLM_API_KEY` + `LLM_MODEL`). Point those at `https://api.openai.com/v1` to use OpenAI. Live embeddings run only if `EMBEDDING_MODEL` is set; a chat key must not send a chat model to `/embeddings`. Tests never need a key.
 
+## Repos (private deploy, public share)
+
+Coolify deploys from **GitLab** (`origin`). The team-facing copy is **GitHub**: [github.com/george-a-cs/dossier](https://github.com/george-a-cs/dossier). Do not point Coolify at GitHub.
+
+```bash
+git remote add public git@github.com:george-a-cs/dossier.git   # once
+ssh -T git@github.com                                          # this machine's SSH key must be on the GitHub account
+git push origin main && git push public main
+```
+
+`.env` stays gitignored. Lab URLs, API keys, and admin passwords live in `.env` and Coolify, not in git.
+
 MCP (optional):
 
 ```bash
