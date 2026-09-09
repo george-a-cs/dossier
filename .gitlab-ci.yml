@@ -1,3 +1,9 @@
+# Temporary: GitLab shared-runner minutes are used up. Remove this
+# workflow block to turn CI back on.
+workflow:
+  rules:
+    - when: never
+
 stages:
   - test
 
