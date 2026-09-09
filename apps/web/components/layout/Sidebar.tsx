@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ProfileMenu } from "@/components/auth/ProfileMenu";
+import { DossierLogo } from "@/components/DossierLogo";
 import { IconBrief, IconFolder, IconHome, IconPlus } from "@/components/icons";
 import { Button } from "@/components/ui/Button";
 import { cn } from "@/lib/cn";
@@ -24,8 +25,8 @@ export function Sidebar({ user }: { user: AuthUser }) {
       <div className="hidden w-60 shrink-0 md:block" aria-hidden="true" />
       <aside className="fixed inset-y-0 left-0 z-20 hidden h-dvh w-60 flex-col border-r border-line bg-surface md:flex">
         <div className="border-b border-line px-5 pt-6 pb-4">
-          <Link href="/" className="text-[22px] font-semibold tracking-tight text-ink">
-            dossier
+          <Link href="/" className="inline-flex">
+            <DossierLogo />
           </Link>
         </div>
         <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto px-3 pt-3" aria-label="Main">

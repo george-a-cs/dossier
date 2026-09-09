@@ -291,32 +291,30 @@ export function FilePreview({
         </div>
         <div className="col-start-2 row-start-1 flex items-center lg:hidden">
           {onEdit ? (
-            <IconButton label="Edit details" onClick={() => onEdit(file)} className="h-9 w-9">
-              <IconPencil className="h-4 w-4" />
+            <IconButton label="Edit details" onClick={() => onEdit(file)}>
+              <IconPencil />
             </IconButton>
           ) : null}
           <IconButton
             label="Download"
             disabled={downloading}
-            className="h-9 w-9"
             onClick={() => {
               void downloadFile();
             }}
           >
-            <IconDownload className="h-4 w-4" />
+            <IconDownload />
           </IconButton>
           <IconButton
             label="Delete"
             tone="danger"
-            className="h-9 w-9"
             onClick={() => setConfirming(true)}
           >
-            <IconTrash className="h-4 w-4" />
+            <IconTrash />
           </IconButton>
         </div>
         <IconButton
           ref={closeRef}
-          className="col-start-3 row-start-1 h-9 w-9 lg:order-last lg:h-10 lg:w-10"
+          className="col-start-3 row-start-1 lg:order-last"
           label="Close preview"
           onClick={onClose}
         >
@@ -539,10 +537,9 @@ export function FilePreview({
                   <p className="m-0 px-3 text-sm font-semibold text-ink">Files</p>
                   <IconButton
                     label="Close files"
-                    className="h-9 w-9"
                     onClick={() => setFilesOpen(false)}
                   >
-                    <IconClose className="h-5 w-5" />
+                    <IconClose />
                   </IconButton>
                 </div>
               </div>

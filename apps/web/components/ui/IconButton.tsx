@@ -25,7 +25,7 @@ export const IconButton = forwardRef<
       aria-label={label}
       title={label}
       className={cn(
-        "inline-flex h-10 w-10 cursor-pointer items-center justify-center rounded-[10px] transition-colors disabled:cursor-not-allowed disabled:opacity-45",
+        "inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-[10px] transition-colors disabled:cursor-not-allowed disabled:opacity-45 [&_svg]:h-5 [&_svg]:w-5",
         TONES[tone],
         className,
       )}

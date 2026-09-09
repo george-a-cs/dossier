@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { DossierLogo } from "@/components/DossierLogo";
 import { Disclaimer } from "./Disclaimer";
 import { MobileNav } from "./MobileNav";
 import { Sidebar } from "./Sidebar";
@@ -14,13 +15,13 @@ export function AppShell({ children }: { children: ReactNode }) {
   const [menuOpen, setMenuOpen] = useState(false);
 
   if (pathname === "/login") {
-    return <div className="min-h-dvh bg-bg">{children}</div>;
+    return children;
   }
 
   if (loading || !user) {
     return (
       <div className="flex min-h-dvh items-center justify-center bg-bg">
-        <p className="m-0 text-[22px] font-semibold tracking-tight text-ink">dossier</p>
+        <DossierLogo />
       </div>
     );
   }

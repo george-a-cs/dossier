@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ProfileMenu } from "@/components/auth/ProfileMenu";
+import { DossierLogo } from "@/components/DossierLogo";
 import {
   IconBrief,
   IconClose,
@@ -63,7 +64,7 @@ export function MobileNav({
       data-state={state}
     >
       <div className="flex items-center justify-between border-b border-line px-5 py-4">
-        <p className="m-0 text-[22px] font-semibold tracking-tight">dossier</p>
+        <DossierLogo />
         <IconButton label="Close menu" onClick={onClose}>
           <IconClose className="h-6 w-6" />
         </IconButton>

@@ -215,14 +215,14 @@ export function Autocomplete({
             type="button"
             tabIndex={-1}
             aria-label="Clear selection"
-            className="pointer-events-auto inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-muted hover:bg-bg hover:text-ink"
+            className="pointer-events-auto inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg text-muted hover:bg-bg hover:text-ink"
             onMouseDown={(event) => event.preventDefault()}
             onClick={clear}
           >
             <IconClose className="h-3.5 w-3.5" />
           </button>
         ) : null}
-        <span className="inline-flex h-8 w-8 items-center justify-center text-muted">
+        <span className="inline-flex h-9 w-9 items-center justify-center text-muted">
           <IconChevronDown
             className={cn(
               "h-4 w-4 transition-transform duration-200 ease-out",

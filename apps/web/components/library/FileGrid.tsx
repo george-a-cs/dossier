@@ -1,4 +1,4 @@
-import { IconPencil, IconTrash } from "@/components/icons";
+import { IconEye, IconPencil, IconTrash } from "@/components/icons";
 import { FileIcon } from "@/components/ui/FileIcon";
 import { IconButton } from "@/components/ui/IconButton";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -36,17 +36,23 @@ export function FileGrid({
                 <FileIcon filename={doc.filename} mime={doc.mime} size="lg" />
                 <div className="flex shrink-0 items-center">
                   <IconButton
+                    label={`View ${doc.filename}`}
+                    onClick={() => onSelect(doc)}
+                  >
+                    <IconEye />
+                  </IconButton>
+                  <IconButton
                     label={`Edit ${doc.filename}`}
                     onClick={() => onEdit(doc)}
                   >
-                    <IconPencil className="h-4 w-4" />
+                    <IconPencil />
                   </IconButton>
                   <IconButton
                     tone="danger"
                     label={`Delete ${doc.filename}`}
                     onClick={() => onDelete(doc)}
                   >
-                    <IconTrash className="h-4 w-4" />
+                    <IconTrash />
                   </IconButton>
                 </div>
               </div>
@@ -55,7 +61,9 @@ export function FileGrid({
                 onClick={() => onSelect(doc)}
                 className="flex min-w-0 flex-1 cursor-pointer flex-col items-start gap-2 border-0 bg-transparent p-0 text-left"
               >
-                <span className="line-clamp-2 break-words text-sm font-semibold">{doc.filename}</span>
+                <span className="line-clamp-2 cursor-pointer break-words text-sm font-semibold hover:underline">
+                  {doc.filename}
+                </span>
                 {doc.notes ? (
                   <span className="line-clamp-2 text-[13px] text-muted">{doc.notes}</span>
                 ) : null}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { IconPencil, IconTrash } from "@/components/icons";
+import { IconEye, IconPencil, IconTrash } from "@/components/icons";
 import { FileIcon } from "@/components/ui/FileIcon";
 import { IconButton } from "@/components/ui/IconButton";
 import { SortHeader, type SortDir } from "@/components/ui/SortHeader";
@@ -139,7 +139,16 @@ export function FileTable({
                   <span className="flex min-w-0 items-center gap-3">
                     <FileIcon filename={doc.filename} mime={doc.mime} />
                     <span className="min-w-0">
-                      <span className="block truncate font-semibold">{doc.filename}</span>
+                      <button
+                        type="button"
+                        className="block max-w-full cursor-pointer truncate text-left font-semibold hover:underline"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          onSelect(doc);
+                        }}
+                      >
+                        {doc.filename}
+                      </button>
                       {doc.notes ? (
                         <span className="mt-0.5 block truncate text-[13px] text-muted">
                           {doc.notes}
@@ -159,13 +168,22 @@ export function FileTable({
                 <td className="px-2 py-3 text-right">
                   <span className="inline-flex items-center justify-end">
                     <IconButton
+                      label={`View ${doc.filename}`}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onSelect(doc);
+                      }}
+                    >
+                      <IconEye />
+                    </IconButton>
+                    <IconButton
                       label={`Edit ${doc.filename}`}
                       onClick={(event) => {
                         event.stopPropagation();
                         onEdit(doc);
                       }}
                     >
-                      <IconPencil className="h-4 w-4" />
+                      <IconPencil />
                     </IconButton>
                     <IconButton
                       tone="danger"
@@ -175,7 +193,7 @@ export function FileTable({
                         onDelete(doc);
                       }}
                     >
-                      <IconTrash className="h-4 w-4" />
+                      <IconTrash />
                     </IconButton>
                   </span>
                 </td>

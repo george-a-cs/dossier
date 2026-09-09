@@ -41,7 +41,7 @@ export function PreviewZoom({
   }
 
   const btn =
-    "inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-[8px] text-muted transition-colors hover:text-ink disabled:cursor-default disabled:opacity-40 lg:h-9 lg:w-9";
+    "inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-[8px] text-muted transition-colors hover:text-ink disabled:cursor-default disabled:opacity-40 lg:h-10 lg:w-10";
 
   return (
     <div
@@ -56,7 +56,7 @@ export function PreviewZoom({
         disabled={value <= ZOOM_MIN}
         onClick={() => onChange(clampZoom(value - ZOOM_STEP))}
       >
-        <IconMinus className="h-4 w-4" />
+        <IconMinus className="h-5 w-5" />
       </button>
       <input
         aria-label="Zoom percent"
@@ -91,7 +91,7 @@ export function PreviewZoom({
         disabled={value >= ZOOM_MAX}
         onClick={() => onChange(clampZoom(value + ZOOM_STEP))}
       >
-        <IconPlus className="h-4 w-4" />
+        <IconPlus className="h-5 w-5" />
       </button>
     </div>
   );
