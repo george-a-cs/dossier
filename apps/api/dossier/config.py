@@ -9,6 +9,8 @@ class Settings(BaseSettings):
         env_file=(".env", "../../.env"),
         env_file_encoding="utf-8",
         extra="ignore",
+        # Coolify injects blank keys (EMBEDDING_DIMENSIONS=). Treat as unset.
+        env_ignore_empty=True,
     )
 
     llm_base_url: str = "https://gravi-lab-ollama.gravitonic.uk/v1"

@@ -57,6 +57,20 @@ def test_cors_origin_is_comma_list(monkeypatch) -> None:
     ]
 
 
+def test_blank_coolify_env_uses_defaults(monkeypatch) -> None:
+    monkeypatch.setenv("EMBEDDING_DIMENSIONS", "")
+    monkeypatch.setenv("EMBEDDING_MODEL", "")
+    monkeypatch.setenv("PRICE_EMBED_PER_1M", "")
+    monkeypatch.setenv("PRICE_LLM_IN_PER_1M", "")
+    monkeypatch.setenv("PRICE_LLM_OUT_PER_1M", "")
+    settings = Settings(_env_file=None)
+    assert settings.embedding_dimensions is None
+    assert settings.embedding_model == ""
+    assert settings.price_embed_per_1m == 0.0
+    assert settings.price_llm_in_per_1m == 0.0
+    assert settings.price_llm_out_per_1m == 0.0
+
+
 def test_lan_ui_origin_regex() -> None:
     allowed = re.compile(LAN_UI_ORIGIN)
     assert allowed.match("http://192.168.0.220:3000")
