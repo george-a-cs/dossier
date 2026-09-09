@@ -87,8 +87,8 @@ UI: `cd apps/web && npm install && npm run dev` → http://localhost:3000. API m
 
 Sign in as the seeded super admin:
 
-- Email: `george@csegoldi.com`
-- Password: `Lets_Check@SomethingElse`
+- Email: `ASK_FROM_GEORGE`
+- Password: `ASK_FROM_GEORGE`
 
 That account can add other users from Settings. Changing its password in the desk is kept across restarts.
 
