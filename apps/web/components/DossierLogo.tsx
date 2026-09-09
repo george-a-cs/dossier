@@ -34,7 +34,7 @@ export function DossierLogo({
   return (
     <span className={cn("inline-flex items-center", tokens.gap, className)}>
       <DossierMark className={tokens.mark} />
-      <span className={cn("font-semibold tracking-tight text-ink", tokens.text)}>
+      <span className={cn("font-semibold tracking-tight text-current", tokens.text)}>
         dossier
       </span>
     </span>
