@@ -18,10 +18,10 @@ from dossier.ingest.fake_embeddings import FakeEmbeddings
 from dossier.ingest.ocr import FallbackImageAnalyzer, RapidOcrAnalyzer
 from dossier.ingest.openai_embeddings import CompatibleEmbeddings
 from dossier.ingest.service import IngestService
+from dossier.paths import seed_dir
 from dossier.ports.embeddings import Embeddings
 from dossier.ports.llm import Llm
 from dossier.ports.repository import Repository, User
-from dossier.paths import seed_dir
 from dossier.ports.vision import ImageAnalyzer
 
 _bearer = HTTPBearer(auto_error=False)
