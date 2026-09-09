@@ -12,5 +12,6 @@ __pycache__
 *.egg-info
 dist
 .turbo
+*.tsbuildinfo
 *.pyc
 .DS_Store
