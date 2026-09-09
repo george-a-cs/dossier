@@ -25,8 +25,8 @@ type ViewMode = "table" | "grid";
 const VIEW_KEY = "dossier.library.view";
 
 function readView(): ViewMode {
-  if (typeof window === "undefined") return "grid";
-  return window.localStorage.getItem(VIEW_KEY) === "table" ? "table" : "grid";
+  if (typeof window === "undefined") return "table";
+  return window.localStorage.getItem(VIEW_KEY) === "grid" ? "grid" : "table";
 }
 
 export function LibraryView() {
@@ -36,7 +36,7 @@ export function LibraryView() {
   const [query, setQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [view, setView] = useState<ViewMode>("grid");
+  const [view, setView] = useState<ViewMode>("table");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState<Document | null>(null);
   const [editing, setEditing] = useState<Document | null>(null);
