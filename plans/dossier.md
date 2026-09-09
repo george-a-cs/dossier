@@ -81,7 +81,7 @@ Provider keys live in `.env` only (never committed). Persist `embedding_model` o
 **Default LLM/embeddings:** self-hosted ollama-swap, OpenAI-compatible:
 
 ```
-LLM_BASE_URL=https://gravi-lab-ollama.gravitonic.uk/v1
+LLM_BASE_URL=https://llm.example.com/v1
 LLM_API_KEY=
 LLM_MODEL=researcher-internal
 EMBEDDING_BASE_URL=   # defaults to LLM_BASE_URL

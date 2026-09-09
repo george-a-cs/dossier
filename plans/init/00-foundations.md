@@ -66,7 +66,7 @@ dist
 ```
 # OpenAI-compatible endpoint. Default = self-hosted ollama-swap.
 # OpenAI:  LLM_BASE_URL=https://api.openai.com/v1
-LLM_BASE_URL=https://gravi-lab-ollama.gravitonic.uk/v1
+LLM_BASE_URL=https://llm.example.com/v1
 LLM_API_KEY=
 LLM_MODEL=researcher-internal
 
