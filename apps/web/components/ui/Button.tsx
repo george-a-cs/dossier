@@ -2,7 +2,7 @@ import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { cn } from "@/lib/cn";
 import { Spinner } from "./Spinner";
 
-export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
+export type ButtonVariant = "primary" | "secondary" | "ghost" | "danger" | "dangerSecondary";
 export type ButtonSize = "sm" | "md";
 
 const VARIANTS: Record<ButtonVariant, string> = {
@@ -13,6 +13,8 @@ const VARIANTS: Record<ButtonVariant, string> = {
   ghost: "bg-transparent text-ink hover:bg-bg disabled:hover:bg-transparent",
   danger:
     "bg-danger text-white shadow-sm hover:bg-[#d63a2f] disabled:hover:bg-danger",
+  dangerSecondary:
+    "bg-surface text-danger ring-1 ring-danger hover:bg-danger-soft disabled:hover:bg-surface",
 };
 
 const SIZES: Record<ButtonSize, string> = {

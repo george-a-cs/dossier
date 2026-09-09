@@ -31,10 +31,12 @@ export function AppShell({ children }: { children: ReactNode }) {
       <Sidebar user={user} />
       <div className="flex min-h-dvh min-w-0 flex-1 flex-col">
         <TopBar onMenu={() => setMenuOpen(true)} />
-        <main className="min-w-0 flex-1 overflow-x-hidden px-4 py-6 md:px-8 md:py-6">
-          {children}
-        </main>
-        <Disclaimer />
+        <div className="mx-auto flex w-full min-w-0 max-w-7xl flex-1 flex-col">
+          <main className="min-w-0 flex-1 overflow-x-hidden px-4 py-6 md:px-8 md:py-6">
+            {children}
+          </main>
+          <Disclaimer />
+        </div>
       </div>
       <MobileNav user={user} open={menuOpen} onClose={() => setMenuOpen(false)} />
     </div>

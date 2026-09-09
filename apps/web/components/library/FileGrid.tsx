@@ -1,6 +1,6 @@
 import { IconEye, IconPencil, IconTrash } from "@/components/icons";
+import { Button } from "@/components/ui/Button";
 import { FileIcon } from "@/components/ui/FileIcon";
-import { IconButton } from "@/components/ui/IconButton";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { formatBytes } from "@/lib/format";
 import { cn } from "@/lib/cn";
@@ -21,7 +21,7 @@ export function FileGrid({
   onDelete: (doc: Document) => void;
 }) {
   return (
-    <ul className="m-0 grid list-none grid-cols-1 gap-3 p-0 min-[480px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4">
+    <ul className="m-0 grid list-none grid-cols-1 gap-3 p-0 min-[480px]:grid-cols-2 lg:grid-cols-3">
       {documents.map((doc) => {
         const selected = doc.id === selectedId;
         return (
@@ -34,45 +34,56 @@ export function FileGrid({
             >
               <div className="mb-3 flex items-start justify-between gap-2">
                 <FileIcon filename={doc.filename} mime={doc.mime} size="lg" />
-                <div className="flex shrink-0 items-center">
-                  <IconButton
-                    label={`View ${doc.filename}`}
-                    onClick={() => onSelect(doc)}
-                  >
-                    <IconEye />
-                  </IconButton>
-                  <IconButton
-                    label={`Edit ${doc.filename}`}
-                    onClick={() => onEdit(doc)}
-                  >
-                    <IconPencil />
-                  </IconButton>
-                  <IconButton
-                    tone="danger"
-                    label={`Delete ${doc.filename}`}
-                    onClick={() => onDelete(doc)}
-                  >
-                    <IconTrash />
-                  </IconButton>
-                </div>
+                <span className="flex min-w-0 flex-wrap items-center justify-end gap-1.5">
+                  <CategoryBadge category={doc.category} />
+                  <StatusBadge status={doc.status} errorCode={doc.error_code} />
+                </span>
               </div>
               <button
                 type="button"
                 onClick={() => onSelect(doc)}
                 className="flex min-w-0 flex-1 cursor-pointer flex-col items-start gap-2 border-0 bg-transparent p-0 text-left"
               >
-                <span className="line-clamp-2 cursor-pointer break-words text-sm font-semibold hover:underline">
+                <span
+                  title={doc.filename}
+                  className="line-clamp-2 w-full min-w-0 break-words text-base font-semibold hover:underline"
+                >
                   {doc.filename}
                 </span>
                 {doc.notes ? (
                   <span className="line-clamp-2 text-[13px] text-muted">{doc.notes}</span>
                 ) : null}
                 <span className="text-[13px] text-muted">{formatBytes(doc.byte_size)}</span>
-                <span className="flex flex-wrap items-center gap-1.5">
-                  <CategoryBadge category={doc.category} />
-                  <StatusBadge status={doc.status} errorCode={doc.error_code} />
-                </span>
               </button>
+              <div className="mt-3 flex flex-wrap justify-end gap-2.5">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="min-w-0 flex-1 px-2 max-w-28"
+                  icon={<IconEye className="h-4 w-4" />}
+                  onClick={() => onSelect(doc)}
+                >
+                  View
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="min-w-0 flex-1 px-2 max-w-28"
+                  icon={<IconPencil className="h-4 w-4" />}
+                  onClick={() => onEdit(doc)}
+                >
+                  Edit
+                </Button>
+                <Button
+                  variant="dangerSecondary"
+                  size="sm"
+                  className="min-w-0 flex-1 px-2 max-w-28"
+                  icon={<IconTrash className="h-4 w-4" />}
+                  onClick={() => onDelete(doc)}
+                >
+                  Delete
+                </Button>
+              </div>
             </div>
           </li>
         );
