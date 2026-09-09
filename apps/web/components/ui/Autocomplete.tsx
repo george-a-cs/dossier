@@ -206,7 +206,7 @@ export function Autocomplete({
         }}
         onKeyDown={onKeyDown}
         className={cn(
-          "h-10 w-full rounded-[10px] border border-line bg-surface py-0 pr-16 pl-3 text-sm text-ink placeholder:text-muted focus:border-primary disabled:cursor-not-allowed disabled:opacity-45",
+          "h-10 w-full rounded-[10px] border border-line bg-surface py-0 pr-16 pl-3 text-base text-ink placeholder:text-muted focus:border-primary disabled:cursor-not-allowed disabled:opacity-45 lg:text-sm",
         )}
       />
       <div className="pointer-events-none absolute inset-y-0 right-1 flex items-center">

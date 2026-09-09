@@ -80,7 +80,7 @@ export function PreviewZoom({
           }
         }}
         className={cn(
-          "h-8 w-[3rem] rounded-[8px] border-0 bg-surface text-center text-[13px] font-medium text-ink shadow-sm lg:h-9 lg:w-[3.4rem]",
+          "h-8 w-[3rem] rounded-[8px] border-0 bg-surface text-center text-base font-medium text-ink shadow-sm lg:h-9 lg:w-[3.4rem] lg:text-[13px]",
           "outline-none focus-visible:ring-2 focus-visible:ring-primary",
         )}
       />

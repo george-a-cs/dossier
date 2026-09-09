@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import Script from "next/script";
 import { AuthProvider } from "@/components/auth/AuthProvider";
@@ -13,6 +13,14 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "Dossier",
   description: "Grounded briefing from your documents",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  minimumScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
