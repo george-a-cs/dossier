@@ -147,6 +147,26 @@ def test_compatible_vision_falls_back_to_native_chat(monkeypatch) -> None:
     assert any(url.endswith("/api/chat") for url in calls)
 
 
+def test_ocr_crash_keeps_vision_text() -> None:
+    class VisionOnly:
+        def analyze(self, *, filename: str, mime: str, data: bytes) -> ImageAnalysis:
+            del filename, mime, data
+            return ImageAnalysis(text="Dose 10 mg once daily.")
+
+    class BrokenOcr:
+        def analyze(self, *, filename: str, mime: str, data: bytes) -> ImageAnalysis:
+            del filename, mime, data
+            raise VisionError("libGL.so.1: cannot open shared object file")
+
+    result = FallbackImageAnalyzer(VisionOnly(), BrokenOcr()).analyze(
+        filename="label.png",
+        mime="image/png",
+        data=PNG_1X1,
+    )
+    assert result.text == "Dose 10 mg once daily."
+    assert result.boxes == ()
+
+
 def test_ocr_fallback_used_when_vision_fails() -> None:
     class Boom:
         def analyze(self, *, filename: str, mime: str, data: bytes) -> str:

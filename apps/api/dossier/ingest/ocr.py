@@ -68,9 +68,15 @@ class FallbackImageAnalyzer:
         except VisionError as exc:
             log.warning("vision_primary_failed", detail=str(exc)[:300])
         log.info("vision_ocr_fallback", filename=filename)
-        fallback = as_analysis(
-            self._fallback.analyze(filename=filename, mime=mime, data=data)
-        )
+        try:
+            fallback = as_analysis(
+                self._fallback.analyze(filename=filename, mime=mime, data=data)
+            )
+        except VisionError as exc:
+            log.warning("vision_ocr_fallback_failed", detail=str(exc)[:300])
+            if primary and primary.text.strip():
+                return primary
+            raise
         if primary and primary.text.strip():
             return ImageAnalysis(text=primary.text, boxes=fallback.boxes)
         return fallback
