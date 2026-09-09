@@ -1,8 +1,9 @@
 FROM python:3.12-slim
 
 WORKDIR /app
-COPY pyproject.toml .
-COPY dossier ./dossier
+COPY apps/api/pyproject.toml .
+COPY apps/api/dossier ./dossier
+COPY data/seed ./data/seed
 RUN pip install --no-cache-dir . sqlite-vec
 
 ENV DATABASE_PATH=/data/dossier.db

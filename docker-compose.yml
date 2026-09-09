@@ -6,7 +6,9 @@
 
 services:
   api:
-    build: ./apps/api
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
     ports:
       - "${API_HOST_PORT:-18471}:8000"
     environment:

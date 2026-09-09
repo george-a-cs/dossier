@@ -11,10 +11,10 @@ from dossier.generate.fake_llm import FakeLlm
 from dossier.ingest.fake_embeddings import FakeEmbeddings
 from dossier.ingest.service import IngestService
 from dossier.orchestrator import brief
+from dossier.paths import seed_dir
 from dossier.retrieve.hybrid import hybrid_search
 
-ROOT = Path(__file__).resolve().parents[4]
-SEED = ROOT / "data" / "seed"
+SEED = seed_dir()
 GOLDEN = SEED / "golden.json"
 
 HIT_THRESHOLD = 0.8

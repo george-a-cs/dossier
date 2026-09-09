@@ -21,12 +21,13 @@ from dossier.ingest.service import IngestService
 from dossier.ports.embeddings import Embeddings
 from dossier.ports.llm import Llm
 from dossier.ports.repository import Repository, User
+from dossier.paths import seed_dir
 from dossier.ports.vision import ImageAnalyzer
 
 _bearer = HTTPBearer(auto_error=False)
 _log = structlog.get_logger("dossier.boot")
 DEFAULT_COLLECTION_ID = "default"
-SEED_DIR = Path(__file__).resolve().parents[4] / "data" / "seed"
+SEED_DIR = seed_dir()
 
 
 @lru_cache
