@@ -264,9 +264,9 @@ export function BriefComposer({ briefId }: { briefId?: string }) {
           const streaming = busy && index === turns.length - 1 && !turn.final;
           return (
             <div key={`${turn.question}-${index}`} className="space-y-2.5">
-              <div className="flex justify-end">
+              <div className="flex justify-end pl-8 sm:pl-0">
                 <Card
-                  className="max-w-[min(36rem,85%)]"
+                  className="min-w-0 w-full max-w-none sm:max-w-[min(36rem,85%)]"
                   style={{
                     backgroundColor: "rgba(255, 255, 255, 0.1)",
                     border: "2px solid white",
@@ -414,16 +414,16 @@ export function BriefComposer({ briefId }: { briefId?: string }) {
                 }
               }}
             />
-            <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center justify-between gap-2 sm:gap-3">
               {last ? (
-                <p className="m-0 text-[13px] text-muted">
+                <p className="m-0 min-w-0 truncate text-[13px] text-muted">
                   {formatMs(last.stats.embed_ms + last.stats.retrieve_ms + last.stats.llm_ms)} ·{" "}
                   {formatMoney(last.stats.cost_usd)} · {last.refused ? "Refused" : "Grounded"}
                 </p>
               ) : null}
               <Button
                 type="submit"
-                className="ml-auto min-w-[7.5rem] px-6"
+                className="ml-auto shrink-0 min-w-[6.25rem] px-4 sm:min-w-[7.5rem] sm:px-6"
                 disabled={!canAsk || !question.trim()}
                 loading={busy}
                 icon={<IconSend className="h-4 w-4" />}
