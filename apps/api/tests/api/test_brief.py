@@ -83,6 +83,7 @@ def test_grounded_brief(tmp_path: Path) -> None:
     assert saved["conversation_id"] == final["conversation_id"]
     assert saved["title"] == "What is the recommended dose?"
     assert saved["turns"][0]["question"] == "What is the recommended dose?"
+    assert saved["turns"][0]["asked_at"]
     assert saved["turns"][0]["final"]["citations"][0]["chunk_id"] == chunk_id
     one = client.get(f"/briefs/{saved['id']}")
     assert one.status_code == 200

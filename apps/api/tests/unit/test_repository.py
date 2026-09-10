@@ -5,7 +5,7 @@ import pytest
 
 from dossier.db.connection import VecExtensionError, apply_schema, connect
 from dossier.db.sqlite_repo import SqliteRepository
-from dossier.ports.repository import Chunk, ChunkWithEmbedding, Document
+from dossier.ports.repository import ChatMessage, Chunk, ChunkWithEmbedding, Document
 
 
 def _repo(tmp_path: Path) -> SqliteRepository:
@@ -203,3 +203,25 @@ def test_brief_roundtrip_and_backfill(tmp_path: Path) -> None:
     assert orphan.user_id == "user-1"
     assert orphan.turns[0]["final"]["refused"] is True
     assert repo.backfill_orphan_briefs() == 0
+
+
+def test_replace_conversation_messages_keeps_order(tmp_path: Path) -> None:
+    repo = _repo(tmp_path)
+    repo.create_collection(
+        id="col-a", name="A", embedding_model="fake", embedding_dimensions=3
+    )
+    repo.create_conversation(id="c3", collection_id="col-a")
+    repo.add_message(conversation_id="c3", role="user", content="first")
+    repo.add_message(conversation_id="c3", role="assistant", content="gone")
+    repo.replace_conversation_messages(
+        conversation_id="c3",
+        messages=[
+            ChatMessage(role="user", content="kept question"),
+            ChatMessage(role="assistant", content="kept answer"),
+        ],
+    )
+    history = repo.list_recent_messages("c3", limit=4)
+    assert [(row.role, row.content) for row in history] == [
+        ("user", "kept question"),
+        ("assistant", "kept answer"),
+    ]

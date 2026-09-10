@@ -53,10 +53,13 @@ export function BriefProgressLabel({
         )}
       >
         {STEPS[step]}
-        <span className="inline-flex w-[1.05em]" aria-hidden="true">
-          <span className="animate-status-dot">.</span>
-          <span className="animate-status-dot [animation-delay:160ms]">.</span>
-          <span className="animate-status-dot [animation-delay:320ms]">.</span>
+        <span
+          className="ml-1.5 inline-flex items-end gap-[3px] pb-px"
+          aria-hidden="true"
+        >
+          <span className="h-1.5 w-0.5 origin-bottom rounded-full bg-current animate-think-bar" />
+          <span className="h-2.5 w-0.5 origin-bottom rounded-full bg-current animate-think-bar [animation-delay:120ms]" />
+          <span className="h-2 w-0.5 origin-bottom rounded-full bg-current animate-think-bar [animation-delay:240ms]" />
         </span>
       </span>
     </span>
@@ -65,8 +68,17 @@ export function BriefProgressLabel({
 
 export function BriefProgressBadge() {
   return (
-    <Badge tone="primary" className="min-w-[7.5rem] justify-center overflow-hidden">
+    <Badge tone="primary" className="min-w-[8.25rem] justify-center overflow-hidden">
       <BriefProgressLabel live />
     </Badge>
+  );
+}
+
+export function BriefThinkingCursor() {
+  return (
+    <span
+      className="inline-block h-4 w-[0.45em] animate-caret bg-ink"
+      aria-hidden="true"
+    />
   );
 }

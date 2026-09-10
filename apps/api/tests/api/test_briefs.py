@@ -100,6 +100,41 @@ def test_put_imports_a_brief_for_this_user(tmp_path: Path) -> None:
     assert client.get("/briefs").json()[0]["id"] == "imported-1"
 
 
+def test_delete_brief_turn_removes_question_and_answer(tmp_path: Path) -> None:
+    client = _client(tmp_path)
+    _seed(client)
+    repo = get_repository(_Request(client.app))
+    embeddings = client.app.state.embeddings
+    chunk_id = repo.search_vector("default", embeddings.embed_texts(["10 mg"])[0], k=1)[0].id
+    client.app.state.llm = FakeLlm(claimed_chunk_ids=[chunk_id])
+    first = client.post(
+        "/collections/default/brief",
+        json={"question": "What is the recommended dose?"},
+    )
+    conversation_id = _final_event(first.text)["conversation_id"]
+    client.post(
+        "/collections/default/brief",
+        json={"question": "And the maximum?", "conversation_id": conversation_id},
+    )
+    removed = client.delete(f"/briefs/{conversation_id}/turns/0")
+    assert removed.status_code == 200
+    body = removed.json()
+    assert len(body["turns"]) == 1
+    assert body["turns"][0]["question"] == "And the maximum?"
+    assert body["title"] == "And the maximum?"
+    history = repo.list_recent_messages(conversation_id, limit=4)
+    assert [(row.role, row.content) for row in history] == [
+        ("user", "And the maximum?"),
+        ("assistant", "The recommended dose is 10 mg."),
+    ]
+    empty = client.delete(f"/briefs/{conversation_id}/turns/0")
+    assert empty.status_code == 200
+    assert empty.json()["turns"] == []
+    assert empty.json()["title"] == "New brief"
+    assert repo.list_recent_messages(conversation_id, limit=4) == []
+    assert client.delete(f"/briefs/{conversation_id}/turns/0").status_code == 404
+
+
 def test_orphan_conversations_backfill_to_admin(tmp_path: Path) -> None:
     client = make_client(tmp_path, auth=True, llm_api_key="")
     assert client.post("/collections", json={"id": "default", "name": "Default"}).status_code == 201

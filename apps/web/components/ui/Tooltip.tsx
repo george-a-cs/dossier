@@ -7,6 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 import { IconInfo } from "@/components/icons";
 import { cn } from "@/lib/cn";
 import { MOTION_MS, usePresence } from "@/lib/use-presence";
@@ -24,7 +25,9 @@ export function Tooltip({
 }) {
   const id = useId();
   const rootRef = useRef<HTMLSpanElement>(null);
+  const tipRef = useRef<HTMLSpanElement>(null);
   const [open, setOpen] = useState(false);
+  const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
   const present = usePresence(open, MOTION_MS.tooltip);
 
   function hoverable() {
@@ -37,7 +40,11 @@ export function Tooltip({
       if (event.key === "Escape") setOpen(false);
     }
     function onPointer(event: PointerEvent) {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+      const target = event.target as Node;
+      if (rootRef.current?.contains(target) || tipRef.current?.contains(target)) {
+        return;
+      }
+      setOpen(false);
     }
     document.addEventListener("keydown", onKey);
     document.addEventListener("pointerdown", onPointer);
@@ -46,6 +53,34 @@ export function Tooltip({
       document.removeEventListener("pointerdown", onPointer);
     };
   }, [open]);
+
+  useEffect(() => {
+    if (!present) {
+      setCoords(null);
+      return;
+    }
+    function place() {
+      const root = rootRef.current;
+      const tip = tipRef.current;
+      if (!root || !tip) return;
+      const rect = root.getBoundingClientRect();
+      const gap = 8;
+      const tipH = tip.offsetHeight;
+      const tipW = tip.offsetWidth;
+      const above = rect.top >= tipH + gap;
+      const top = above ? rect.top - tipH - gap : rect.bottom + gap;
+      const left = Math.min(Math.max(8, rect.left), window.innerWidth - tipW - 8);
+      setCoords({ top, left });
+    }
+    const frame = window.requestAnimationFrame(place);
+    window.addEventListener("scroll", place, true);
+    window.addEventListener("resize", place);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", place, true);
+      window.removeEventListener("resize", place);
+    };
+  }, [present]);
 
   return (
     <span
@@ -67,7 +102,9 @@ export function Tooltip({
         onClick={() => {
           if (!hoverable()) setOpen((current) => !current);
         }}
-        onFocus={() => setOpen(true)}
+        onFocus={() => {
+          if (hoverable()) setOpen(true);
+        }}
         onBlur={(event) => {
           if (!rootRef.current?.contains(event.relatedTarget as Node)) {
             setOpen(false);
@@ -76,16 +113,26 @@ export function Tooltip({
       >
         {children ?? <IconInfo className="h-4 w-4" />}
       </button>
-      {present ? (
-        <span
-          id={id}
-          role="tooltip"
-          data-state={open ? "open" : "closed"}
-          className="ui-tooltip absolute top-full left-0 z-50 mt-1.5 w-72 max-w-[min(18rem,calc(100vw-2rem))] rounded-[12px] border border-line bg-surface px-3 py-2.5 text-left text-[13px] leading-5 font-normal text-ink shadow-md"
-        >
-          {content}
-        </span>
-      ) : null}
+      {present
+        ? createPortal(
+            <span
+              ref={tipRef}
+              id={id}
+              role="tooltip"
+              data-state={open ? "open" : "closed"}
+              style={{
+                position: "fixed",
+                top: coords?.top ?? 0,
+                left: coords?.left ?? 0,
+                visibility: coords ? "visible" : "hidden",
+              }}
+              className="ui-tooltip z-50 w-72 max-w-[min(18rem,calc(100vw-2rem))] rounded-[12px] border border-line bg-surface px-3 py-2.5 text-left text-[13px] leading-5 font-normal text-ink shadow-md"
+            >
+              {content}
+            </span>,
+            document.body,
+          )
+        : null}
     </span>
   );
 }

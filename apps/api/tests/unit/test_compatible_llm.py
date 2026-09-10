@@ -11,3 +11,17 @@ def test_missing_json_means_no_cites() -> None:
     text, ids = _split_citations("I do not know.")
     assert text == "I do not know."
     assert ids == []
+
+
+def test_inline_cite_without_json_is_claimed() -> None:
+    text, ids = _split_citations("The film was clear 【chk-1】.")
+    assert text == "The film was clear 【chk-1】."
+    assert ids == ["chk-1"]
+
+
+def test_fenced_json_is_claimed() -> None:
+    text, ids = _split_citations(
+        'The film was clear.\n```json\n{"chunk_ids":["chk-1"]}\n```'
+    )
+    assert text == "The film was clear."
+    assert ids == ["chk-1"]

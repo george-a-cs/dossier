@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   deleteBrief as deleteBriefApi,
+  deleteBriefTurn as deleteBriefTurnApi,
   getBrief as getBriefApi,
   listBriefs as listBriefsApi,
   putBrief,
@@ -45,6 +46,12 @@ export async function getBrief(id: string): Promise<SavedBrief | null> {
 export async function deleteBrief(id: string): Promise<void> {
   await deleteBriefApi(id);
   notify();
+}
+
+export async function deleteBriefTurn(id: string, index: number): Promise<SavedBrief> {
+  const saved = await deleteBriefTurnApi(id, index);
+  notify();
+  return saved;
 }
 
 export function notifyBriefsChanged(): void {

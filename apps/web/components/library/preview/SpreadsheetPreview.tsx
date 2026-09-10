@@ -247,7 +247,7 @@ export function SpreadsheetPreview({
                       }}
                     >
                       {isHit
-                        ? splitHighlight(text, highlight, passage).map((part, index) =>
+                        ? splitHighlight(text, highlight).map((part, index) =>
                             part.hit ? (
                               <mark key={index} className={CITE_MARK_CLASS}>
                                 {part.text}

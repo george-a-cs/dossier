@@ -114,6 +114,7 @@ export type SavedTurn = {
   question: string;
   answer: string;
   final: BriefFinal | null;
+  asked_at?: string | null;
 };
 
 export type SavedBrief = {

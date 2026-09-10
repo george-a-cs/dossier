@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/cn";
 import {
   CITE_MARK_CLASS,
-  highlightDom,
+  highlightPagedDom,
   splitHighlight,
   type HighlightQuery,
 } from "@/lib/cite-highlight";
@@ -118,8 +118,8 @@ export function DocxPreview({
     const host = hostRef.current;
     const scroll = scrollRef.current;
     if (!host || !ready) return;
-    const mark = highlightDom(host, highlight, passage);
     const pages = pageNodes(host);
+    const mark = highlightPagedDom(pages.length ? pages : [host], highlight, passage);
     setThumbs(
       pages.map((node, index) => ({
         page: index + 1,

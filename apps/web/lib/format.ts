@@ -8,6 +8,7 @@ const DATE_TIME = new Intl.DateTimeFormat(undefined, {
   day: "numeric",
   hour: "numeric",
   minute: "2-digit",
+  hour12: true,
 });
 
 export function formatBytes(bytes: number | null | undefined): string {

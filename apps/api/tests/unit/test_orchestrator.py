@@ -120,6 +120,30 @@ def test_history_truncated_to_four(tmp_path: Path) -> None:
     assert user_turns[0].content == "turn 2"
 
 
+def test_follow_up_inline_cites_without_json_are_kept(tmp_path: Path) -> None:
+    repo, embeddings = _ready(tmp_path)
+    chunk_id = repo.search_vector("default", embeddings.embed_texts(["10 mg"])[0], k=1)[0].id
+    llm = FakeLlm(
+        text=f"The recommended dose is 10 mg 【{chunk_id}】.",
+        claimed_chunk_ids=[],
+        rewrite_text="What is the recommended dose?",
+    )
+    result = brief(
+        repo=repo,
+        embeddings=embeddings,
+        llm=llm,
+        collection_id="default",
+        question="what about that again?",
+        history=[
+            ChatMessage(role="user", content="Is there an X-ray?"),
+            ChatMessage(role="assistant", content="Yes. A baseline film was clear."),
+        ],
+    )
+    assert result.refused is False
+    assert result.text == f"The recommended dose is 10 mg 【{chunk_id}】."
+    assert result.citations[0].chunk_id == chunk_id
+
+
 def test_follow_up_history_strips_cite_marks(tmp_path: Path) -> None:
     repo, embeddings = _ready(tmp_path)
     chunk_id = repo.search_vector("default", embeddings.embed_texts(["10 mg"])[0], k=1)[0].id

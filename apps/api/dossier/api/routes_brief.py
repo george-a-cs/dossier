@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import uuid
 from collections.abc import Iterator
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
@@ -14,7 +15,7 @@ from dossier.observability.cost import estimate_cost_usd
 from dossier.orchestrator import BriefResult, BriefToken, brief_events
 from dossier.ports.embeddings import Embeddings
 from dossier.ports.llm import Llm
-from dossier.ports.repository import Brief, Repository, User
+from dossier.ports.repository import Brief, ChatMessage, Repository, User
 
 router = APIRouter()
 
@@ -28,6 +29,7 @@ class BriefTurnIn(BaseModel):
     question: str
     answer: str = ""
     final: dict | None = None
+    asked_at: str | None = None
 
 
 class UpsertBriefBody(BaseModel):
@@ -163,6 +165,47 @@ def delete_brief(
     repo.delete_brief(brief_id, user.id)
 
 
+def _messages_from_turns(turns: list[dict]) -> list[ChatMessage]:
+    messages: list[ChatMessage] = []
+    for turn in turns:
+        question = str(turn.get("question") or "").strip()
+        if question:
+            messages.append(ChatMessage(role="user", content=question))
+        final = turn.get("final") if isinstance(turn.get("final"), dict) else {}
+        answer = str(turn.get("answer") or final.get("text") or "").strip()
+        if answer:
+            messages.append(ChatMessage(role="assistant", content=answer))
+    return messages
+
+
+@router.delete("/briefs/{brief_id}/turns/{turn_index}")
+def delete_brief_turn(
+    brief_id: str,
+    turn_index: int,
+    repo: Repository = Depends(get_repository),
+    user: User = Depends(require_user),
+) -> dict:
+    brief = _owned_brief(repo, brief_id, user.id)
+    if turn_index < 0 or turn_index >= len(brief.turns):
+        raise HTTPException(status_code=404, detail="turn not found")
+    turns = [turn for index, turn in enumerate(brief.turns) if index != turn_index]
+    first = str(turns[0].get("question") or "Brief") if turns else "New brief"
+    saved = repo.upsert_brief(
+        id=brief.id,
+        user_id=user.id,
+        collection_id=brief.collection_id,
+        conversation_id=brief.conversation_id,
+        title=_title(first) if turns else "New brief",
+        turns=turns,
+        created_at=brief.created_at,
+    )
+    repo.replace_conversation_messages(
+        conversation_id=brief.conversation_id,
+        messages=_messages_from_turns(turns),
+    )
+    return _brief_json(saved)
+
+
 @router.post("/collections/{collection_id}/brief")
 def brief_collection(
     collection_id: str,
@@ -183,6 +226,7 @@ def brief_collection(
     if body.conversation_id is None:
         repo.create_conversation(id=conversation_id, collection_id=collection_id)
     history = repo.list_recent_messages(conversation_id, limit=4)
+    asked_at = datetime.now(UTC).isoformat()
     repo.add_message(conversation_id=conversation_id, role="user", content=body.question)
 
     def events() -> Iterator[str]:
@@ -232,6 +276,7 @@ def brief_collection(
                 "question": body.question,
                 "answer": result.text,
                 "final": final,
+                "asked_at": asked_at,
             }
         )
         repo.upsert_brief(

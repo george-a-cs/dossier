@@ -36,6 +36,7 @@
   --animate-caret: caret 1s step-end infinite;
   --animate-brief-status: brief-status 220ms ease-out;
   --animate-status-dot: status-dot 1s ease-in-out infinite;
+  --animate-think-bar: think-bar 720ms ease-in-out infinite;
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-in: cubic-bezier(0.4, 0, 1, 1);
 }
@@ -67,6 +68,18 @@
   }
   100% {
     opacity: 0.25;
+  }
+}
+
+@keyframes think-bar {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scaleY(0.4);
+  }
+  50% {
+    opacity: 1;
+    transform: scaleY(1);
   }
 }
 
@@ -323,6 +336,13 @@
     box-decoration-break: clone;
     -webkit-box-decoration-break: clone;
     mix-blend-mode: multiply;
+  }
+
+  .docx-host mark.cite-highlight,
+  .xls-cell mark.cite-highlight {
+    background-color: rgb(255 226 70 / 0.7) !important;
+    color: inherit !important;
+    box-shadow: inset 0 0 0 1px rgb(251 191 36 / 0.55);
   }
 
   .cite-pdf-hl {

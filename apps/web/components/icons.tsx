@@ -132,6 +132,15 @@ export function IconUpload(props: IconProps) {
   );
 }
 
+export function IconSend(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="m22 2-7 20-4-9-9-4z" />
+      <path d="M22 2 11 13" />
+    </Icon>
+  );
+}
+
 export function IconDownload(props: IconProps) {
   return (
     <Icon {...props}>

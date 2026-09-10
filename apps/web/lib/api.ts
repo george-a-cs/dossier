@@ -320,6 +320,14 @@ export async function deleteBrief(id: string): Promise<void> {
   }
 }
 
+export async function deleteBriefTurn(id: string, index: number): Promise<SavedBrief> {
+  return toSavedBrief(
+    await json<ApiBrief>(
+      await request(`/briefs/${id}/turns/${index}`, { method: "DELETE" }),
+    ),
+  );
+}
+
 export function stripCiteTrailer(raw: string): string {
   const marked = raw.search(/\n\s*\{\s*"chunk_ids"/);
   if (marked >= 0) return raw.slice(0, marked).trimEnd();

@@ -1,15 +1,13 @@
 from __future__ import annotations
 
 import json
-import re
 from collections.abc import Iterator
 
 import httpx
 
+from dossier.generate.citations import claimed_ids_from_answer
 from dossier.ports.llm import LlmEvent, LlmUsage
 from dossier.ports.repository import ChatMessage
-
-_TRAILING_JSON = re.compile(r"\{[^{}]*\"chunk_ids\"[^{}]*\}\s*$", re.DOTALL)
 
 
 class CompatibleLlm:
@@ -74,13 +72,4 @@ class CompatibleLlm:
 
 
 def _split_citations(raw: str) -> tuple[str, list[str]]:
-    match = _TRAILING_JSON.search(raw.strip())
-    if not match:
-        return raw.strip(), []
-    try:
-        payload = json.loads(match.group(0))
-    except json.JSONDecodeError:
-        return raw.strip(), []
-    ids = payload.get("chunk_ids") or []
-    text = raw[: match.start()].strip()
-    return text, [str(item) for item in ids]
+    return claimed_ids_from_answer(raw)

@@ -5,7 +5,7 @@ import re
 import sqlite3
 import threading
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from functools import wraps
 
 from dossier.db.connection import ensure_vec_table
@@ -84,7 +84,30 @@ def _brief_title(question: str, max_len: int = 72) -> str:
     return f"{trimmed[: max_len - 1].rstrip()}…"
 
 
-def _brief_from_row(row: sqlite3.Row) -> Brief:
+def _fill_asked_at(
+    conn: sqlite3.Connection, conversation_id: str, turns: list[dict]
+) -> list[dict]:
+    if not turns or all(isinstance(turn, dict) and turn.get("asked_at") for turn in turns):
+        return turns
+    rows = conn.execute(
+        """
+        SELECT created_at FROM messages
+        WHERE conversation_id = ? AND role = 'user'
+        ORDER BY created_at
+        """,
+        (conversation_id,),
+    ).fetchall()
+    times = [row["created_at"] for row in rows]
+    filled: list[dict] = []
+    for index, turn in enumerate(turns):
+        row = dict(turn) if isinstance(turn, dict) else {}
+        if not row.get("asked_at") and index < len(times):
+            row["asked_at"] = times[index]
+        filled.append(row)
+    return filled
+
+
+def _brief_from_row(row: sqlite3.Row, conn: sqlite3.Connection | None = None) -> Brief:
     raw = row["turns"]
     try:
         turns = json.loads(raw)
@@ -92,6 +115,8 @@ def _brief_from_row(row: sqlite3.Row) -> Brief:
         turns = []
     if not isinstance(turns, list):
         turns = []
+    if conn is not None:
+        turns = _fill_asked_at(conn, row["conversation_id"], turns)
     return Brief(
         id=row["id"],
         user_id=row["user_id"],
@@ -107,7 +132,7 @@ def _brief_from_row(row: sqlite3.Row) -> Brief:
 def _turns_from_messages(conn: sqlite3.Connection, conversation_id: str) -> list[dict]:
     rows = conn.execute(
         """
-        SELECT role, content FROM messages
+        SELECT role, content, created_at FROM messages
         WHERE conversation_id = ?
         ORDER BY created_at
         """,
@@ -115,15 +140,18 @@ def _turns_from_messages(conn: sqlite3.Connection, conversation_id: str) -> list
     ).fetchall()
     turns: list[dict] = []
     pending: str | None = None
+    pending_at: str | None = None
     for row in rows:
         if row["role"] == "user":
             pending = row["content"]
+            pending_at = row["created_at"]
             continue
         if row["role"] == "assistant" and pending is not None:
             text = row["content"]
             turns.append(
                 {
                     "question": pending,
+                    "asked_at": pending_at,
                     "answer": text,
                     "final": {
                         "text": text,
@@ -566,6 +594,26 @@ class SqliteRepository:
         self._conn.commit()
 
     @_locked
+    def replace_conversation_messages(
+        self, *, conversation_id: str, messages: list[ChatMessage]
+    ) -> None:
+        self._conn.execute(
+            "DELETE FROM messages WHERE conversation_id = ?",
+            (conversation_id,),
+        )
+        started = datetime.now(UTC)
+        for index, message in enumerate(messages):
+            created = (started + timedelta(milliseconds=index)).isoformat()
+            self._conn.execute(
+                """
+                INSERT INTO messages (id, conversation_id, role, content, created_at)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (str(uuid.uuid4()), conversation_id, message.role, message.content, created),
+            )
+        self._conn.commit()
+
+    @_locked
     def list_recent_messages(self, conversation_id: str, limit: int = 4) -> list[ChatMessage]:
         rows = self._conn.execute(
             """
@@ -581,7 +629,7 @@ class SqliteRepository:
     @_locked
     def get_brief(self, id: str) -> Brief | None:
         row = self._conn.execute("SELECT * FROM briefs WHERE id = ?", (id,)).fetchone()
-        return _brief_from_row(row) if row else None
+        return _brief_from_row(row, self._conn) if row else None
 
     @_locked
     def list_briefs(self, user_id: str) -> list[Brief]:
@@ -593,7 +641,7 @@ class SqliteRepository:
             """,
             (user_id,),
         ).fetchall()
-        return [_brief_from_row(row) for row in rows]
+        return [_brief_from_row(row, self._conn) for row in rows]
 
     @_locked
     def upsert_brief(

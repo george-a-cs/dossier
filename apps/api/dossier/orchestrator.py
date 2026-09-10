@@ -4,7 +4,11 @@ import time
 from collections.abc import Iterator
 from dataclasses import dataclass, field
 
-from dossier.generate.citations import apply_refuse_policy, verify_citations
+from dossier.generate.citations import (
+    apply_refuse_policy,
+    claimed_ids_from_answer,
+    verify_citations,
+)
 from dossier.generate.pack import pack
 from dossier.generate.prompts import SYSTEM_PROMPT, build_user_message, history_to_messages
 from dossier.generate.rewrite import rewrite_question
@@ -100,6 +104,10 @@ def brief_events(
                 tokens_out = event.usage.tokens_out
     llm_ms = (time.perf_counter() - started) * 1000
 
+    display, extracted = claimed_ids_from_answer(final_text)
+    if display:
+        final_text = display
+    claimed = list(dict.fromkeys([*claimed, *extracted]))
     verify = verify_citations(claimed, set(packed.ids))
     text, refused = apply_refuse_policy(final_text, verify)
     citations = _citations(repo, verify.kept) if not refused else []

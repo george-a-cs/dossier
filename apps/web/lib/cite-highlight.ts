@@ -491,7 +491,23 @@ function flattenSheet(
   return { text, spans };
 }
 
-/** Cells whose displayed text matches the query, preferring the cited sheet passage. */
+function cellsForHits(spans: CellSpan[], termHits: CompactHit[], sheet: number): SheetHit[] {
+  const seen = new Set<string>();
+  const hits: SheetHit[] = [];
+  for (const hit of termHits) {
+    for (const span of spans) {
+      if (span.end <= span.start) continue;
+      if (hit.start >= span.end || hit.end <= span.start) continue;
+      const key = `${span.row}:${span.col}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      hits.push({ sheet, row: span.row, col: span.col });
+    }
+  }
+  return hits;
+}
+
+/** Cells whose displayed text matches the query, on every sheet. Cited sheet first. */
 export function matchSheetCells(
   sheets: { name?: string; cells: (string | null | undefined)[][] }[],
   query?: HighlightQuery,
@@ -502,32 +518,41 @@ export function matchSheetCells(
   if (!terms.length) return [];
 
   const perSheet = sheets.map((sheet, index) => {
+    const number = index + 1;
     const { text, spans } = flattenSheet(sheet.name ?? "", sheet.cells);
     const window = passage?.trim() ? locatePassage(text, passage) : null;
-    const termHits = window
-      ? findTermHits(text, terms).filter((hit) => hit.start < window.end && hit.end > window.start)
-      : findTermHits(text, terms);
-    const seen = new Set<string>();
-    const hits: SheetHit[] = [];
-    for (const hit of termHits) {
-      for (const span of spans) {
-        if (span.end <= span.start) continue;
-        if (hit.start >= span.end || hit.end <= span.start) continue;
-        const key = `${span.row}:${span.col}`;
-        if (seen.has(key)) continue;
-        seen.add(key);
-        hits.push({ sheet: index + 1, row: span.row, col: span.col });
-      }
-    }
-    return { sheet: index + 1, usedWindow: Boolean(window), hits };
+    const termHits = findTermHits(text, terms);
+    const allHits = cellsForHits(spans, termHits, number);
+    const citedHits = window
+      ? cellsForHits(
+          spans,
+          termHits.filter((hit) => hit.start < window.end && hit.end > window.start),
+          number,
+        )
+      : [];
+    const citedKeys = new Set(citedHits.map((hit) => `${hit.row}:${hit.col}`));
+    return {
+      sheet: number,
+      usedWindow: Boolean(window),
+      hits: [...citedHits, ...allHits.filter((hit) => !citedKeys.has(`${hit.row}:${hit.col}`))],
+    };
   });
 
-  const windowed = perSheet.filter((leaf) => leaf.usedWindow);
-  const chosen = windowed.length
-    ? windowed
-    : perSheet.filter((leaf) => (sheetHint ? leaf.sheet === sheetHint : true));
+  const preferred = new Set(
+    (perSheet.some((leaf) => leaf.usedWindow)
+      ? perSheet.filter((leaf) => leaf.usedWindow)
+      : perSheet.filter((leaf) => (sheetHint ? leaf.sheet === sheetHint : true))
+    ).map((leaf) => leaf.sheet),
+  );
 
-  return chosen.flatMap((leaf) => leaf.hits);
+  return perSheet
+    .slice()
+    .sort((a, b) => {
+      const ap = preferred.has(a.sheet) ? 0 : 1;
+      const bp = preferred.has(b.sheet) ? 0 : 1;
+      return ap - bp || a.sheet - b.sheet;
+    })
+    .flatMap((leaf) => leaf.hits);
 }
 
 export function matchImageBoxes(
@@ -601,14 +626,17 @@ export function highlightDom(
   }
 
   const haystack = nodes.map((node) => node.textContent ?? "").join("");
-  const hits = focusedHits(haystack, terms, passage);
+  const hits = findTermHits(haystack, terms);
   if (!hits.length) return null;
+  const focusWindow = passage?.trim() ? locatePassage(haystack, passage) : null;
 
   const byNode = new Map<Text, CompactHit[]>();
-  for (const hit of hits) {
-    let offset = 0;
-    for (const node of nodes) {
-      const length = node.textContent?.length ?? 0;
+  const nodeOffsets = new Map<Text, number>();
+  let offset = 0;
+  for (const node of nodes) {
+    nodeOffsets.set(node, offset);
+    const length = node.textContent?.length ?? 0;
+    for (const hit of hits) {
       const from = Math.max(hit.start, offset);
       const to = Math.min(hit.end, offset + length);
       if (from < to) {
@@ -616,17 +644,50 @@ export function highlightDom(
         list.push({ start: from - offset, end: to - offset });
         byNode.set(node, list);
       }
-      offset += length;
     }
+    offset += length;
   }
 
   let earliest: HTMLElement | null = null;
+  let earliestAt = Infinity;
+  let cited: HTMLElement | null = null;
+  let citedAt = Infinity;
   for (const node of nodes) {
+    const base = nodeOffsets.get(node) ?? 0;
     const ranges = (byNode.get(node) ?? []).sort((a, b) => b.start - a.start);
-    ranges.forEach((range, index) => {
+    for (const range of ranges) {
       const mark = wrapRange(node, range.start, range.end);
-      if (index === ranges.length - 1 && !earliest) earliest = mark;
-    });
+      const absStart = base + range.start;
+      const absEnd = base + range.end;
+      if (absStart < earliestAt) {
+        earliest = mark;
+        earliestAt = absStart;
+      }
+      if (focusWindow && absStart < focusWindow.end && absEnd > focusWindow.start && absStart < citedAt) {
+        cited = mark;
+        citedAt = absStart;
+      }
+    }
   }
-  return earliest;
+  return cited ?? earliest;
+}
+
+/** Paint keywords on each page/root; scroll to the cited page when the passage is found. */
+export function highlightPagedDom(
+  roots: HTMLElement[],
+  query?: HighlightQuery,
+  passage?: string | null,
+): HTMLElement | null {
+  if (!roots.length) return null;
+  let first: HTMLElement | null = null;
+  let cited: HTMLElement | null = null;
+  for (const root of roots) {
+    const mark = highlightDom(root, query, passage);
+    if (!mark) continue;
+    first ??= mark;
+    if (passage && findCompactMatch(root.innerText, passage)) {
+      cited ??= mark;
+    }
+  }
+  return cited ?? first;
 }
